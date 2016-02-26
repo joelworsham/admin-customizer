@@ -8,7 +8,7 @@ Author: Joel Worsham
 
 defined( 'ABSPATH' ) || die();
 
-if ( ! class_exists( 'AdminCustomizer' ) ) {
+if ( ! class_exists( 'AC' ) ) {
 
 	/**
 	 * Class Admin_Customizer
@@ -19,7 +19,34 @@ if ( ! class_exists( 'AdminCustomizer' ) ) {
 	 *
 	 * @package AdminCustomizer
 	 */
-	final class AdminCustomizer {
+	final class AC {
+
+		/**
+		 * The admin module.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @var AC_Admin
+		 */
+		private $admin;
+
+		/**
+		 * The interface module.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @var AC_Admin
+		 */
+		private $interface;
+
+		/**
+		 * All data to be localized to the primary script.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @var array
+		 */
+		private $script_data = array();
 
 		/**
 		 * Disable cloning.
@@ -34,27 +61,62 @@ if ( ! class_exists( 'AdminCustomizer' ) ) {
 		 *
 		 * @since 0.1.0
 		 *
-		 * @return AdminCustomizer()
+		 * @return AC()
 		 */
 		public static function instance() {
 
 			static $instance = null;
 
 			if ( $instance === null ) {
-				$instance = new AdminCustomizer();
+				$instance = new AC();
 			}
 
 			return $instance;
 		}
 
 		/**
-		 * AdminCustomizer constructor.
+		 * AC constructor.
 		 *
 		 * @since 0.1.0
 		 */
 		private function __construct() {
 
+			// This plugin only loads on the administrative side of WordPress
+			if ( ! is_admin() ) {
+				return;
+			}
+
 			$this->set_constants();
+			$this->require_necessities();
+
+			add_action( 'admin_init', array( $this, 'register_assets' ) );
+			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+
+			$this->admin     = new AC_Admin();
+			$this->interface = new AC_Interface();
+
+			// REMOVE
+			add_action( 'admin_menu', function () {
+//
+//				global $menu, $submenu;
+				add_menu_page(
+					'Test',
+					'Test',
+					'manage_options',
+					'test',
+						'',
+						'',
+						10
+				);
+//
+//				add_submenu_page(
+//					'test',
+//					'Testing',
+//					'Testing',
+//					'manage_options',
+//					'testing'
+//				);
+			}, 1000 );
 		}
 
 		/**
@@ -68,7 +130,87 @@ if ( ! class_exists( 'AdminCustomizer' ) ) {
 			define( 'ADMINCUSTOMIZER_DIR', plugin_dir_path( __FILE__ ) );
 			define( 'ADMINCUSTOMIZER_URI', plugins_url( '', __FILE__ ) );
 		}
+
+		/**
+		 * Requires all plugin files.
+		 *
+		 * @since 0.1.0
+		 */
+		private function require_necessities() {
+
+			require_once ADMINCUSTOMIZER_DIR . '/includes/class-ac-admin.php';
+			require_once ADMINCUSTOMIZER_DIR . '/includes/class-ac-interface.php';
+			require_once ADMINCUSTOMIZER_DIR . '/includes/customize/class-ac-customize-adminmenu.php';
+		}
+
+		/**
+		 * Registers all plugin assets.
+		 *
+		 * @since 0.1.0
+		 * @access private
+		 */
+		function register_assets() {
+
+			wp_register_script(
+				'ac',
+				ADMINCUSTOMIZER_URI . '/assets/dist/js/admin-customizer.min.js',
+				array( 'jquery' ),
+				defined( 'WP_DEBUG' ) && WP_DEBUG ? time() : ADMINCUSTOMIZER_VER,
+				true
+			);
+
+			wp_register_style(
+				'ac',
+				ADMINCUSTOMIZER_URI . '/assets/dist/css/admin-customizer.min.css',
+				array(),
+				defined( 'WP_DEBUG' ) && WP_DEBUG ? time() : ADMINCUSTOMIZER_VER
+			);
+		}
+
+		/**
+		 * Enqueues all plugin assets.
+		 *
+		 * @since 0.1.0
+		 * @access private
+		 */
+		function enqueue_assets() {
+
+			/**
+			 * Filter all localization data.
+			 *
+			 * @since 0.1.0
+			 */
+			$data = apply_filters( 'ac_script_data', $this->script_data );
+			wp_localize_script( 'ac', 'AC', $data );
+
+			wp_enqueue_script( 'ac' );
+			wp_enqueue_style( 'ac' );
+		}
+
+		/**
+		 * Adds a piece of data to the script data to be localized.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @param string $key
+		 * @param mixed $value
+		 */
+		public function add_script_data( $key, $value = '1' ) {
+
+			/**
+			 * Filter the localization data piece.
+			 *
+			 * @since 0.1.0
+			 */
+			$data = apply_filters( 'ac_add_script_data', array( $key, $value ) );
+
+			if ( ! isset( $this->script_data[ $data[0] ] ) ) {
+				$this->script_data[ $data[0] ] = $data[1];
+			}
+		}
 	}
 
-	$GLOBALS['AdminCustomizer'] = AdminCustomizer::instance();
+	// Primary instantiation
+	require_once __DIR__ . '/includes/ac-functions.php';
+	$GLOBALS['AC'] = AC();
 }

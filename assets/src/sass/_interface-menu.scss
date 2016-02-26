@@ -1,0 +1,119 @@
+/*
+Interface admin menu styles.
+
+@since 0.1.0
+*/
+
+@mixin menu-colors($color1) {
+  #adminmenu {
+    &.ui-sortable {
+      .wp-menu-separator {
+        &:hover {
+          background-color: $color1;
+        }
+      }
+    }
+  }
+}
+
+body.ac-customize {
+  #adminmenu {
+    .wp-menu-separator {
+      height: 34px;
+      margin: 0;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #191e23;
+      }
+    }
+
+    > .ui-sortable-placeholder {
+      height: 30px; // Default menu item height - new border
+      border-top: 2px dashed lighten(#191e23, 20%);
+      border-bottom: 2px dashed lighten(#191e23, 20%);
+    }
+
+    .wp-submenu {
+      .ui-sortable-placeholder {
+        height: 22px; // Default submenu item height - new border
+        border-top: 2px dashed lighten(#191e23, 20%);
+        border-bottom: 2px dashed lighten(#191e23, 20%);
+      }
+
+      .ui-sortable-helper {
+        background-color: #32373c;
+        box-shadow: 0 3px 5px rgba(0, 0, 0, .2);
+        z-index: 100;
+      }
+    }
+
+    li {
+      &.ac-hidden {
+        > a {
+          color: #666;
+
+          .wp-menu-image {
+            &:before {
+              color: inherit;
+            }
+          }
+        }
+
+        span.ac-visibility {
+          span.ac-visible {
+            display: none;
+          }
+        }
+
+        .wp-submenu {
+          a {
+            color: #666;
+          }
+        }
+      }
+
+      &:not(.ac-hidden) {
+        > a {
+          span.ac-visibility {
+            span.ac-hidden {
+              display: none;
+            }
+          }
+        }
+      }
+
+      a {
+        padding-left: 20px;
+      }
+
+      span.ac-visibility {
+        position: absolute;
+        left: 0;
+      }
+    }
+  }
+
+  #collapse-menu {
+    display: none;
+  }
+
+  #ac-interface-adminmenu-trash {
+    color: #eee;
+    font-size: 14px;
+    margin-top: 1em;
+    text-align: center;
+
+    ul {
+      border: 1px solid;
+      min-height: 34px;
+    }
+  }
+}
+
+// Color Schemes
+// TODO Color schemes
+body {
+  &.admin-color-fresh {
+  }
+}
