@@ -4,6 +4,7 @@
  @since 0.1.0
  */
 
+var AC_Interface;
 (function ($, data) {
     'use strict';
 
@@ -13,7 +14,7 @@
      * @since 0.1.0
      * @access private
      */
-    var api = {
+    var api = AC_Interface = {
 
         /**
          * All interface elements.
@@ -52,7 +53,6 @@
             api.get_elements();
             api.setup_handlers();
             api.launch_interface();
-            api.set_menu_items_visibility();
         },
 
         /**
@@ -63,8 +63,10 @@
         get_elements: function () {
 
             api.$elements.adminmenu = $('#adminmenu');
+            api.$elements.adminmenu_trash = $('#ac-interface-adminmenu-trash');
             api.$elements.toolbar = $('#ac-interface-toolbar');
             api.$elements.save = api.$elements.toolbar.find('[data-ac-interface-save]');
+            api.$elements.reset = api.$elements.toolbar.find('[data-ac-interface-reset]');
             api.$elements.select_role = api.$elements.toolbar.find('[data-ac-interface-select-role]');
         },
 
@@ -76,8 +78,8 @@
         setup_handlers: function () {
 
             api.$elements.save.click(api.save_interface);
+            api.$elements.reset.click(api.reset_interface);
             api.$elements.select_role.change(api.change_role);
-            api.$elements.adminmenu.find('.ac-visibility').click(api.toggle_menu_item_visibility);
         },
 
         /**
@@ -86,12 +88,6 @@
          * @since 0.1.0
          */
         launch_interface: function () {
-
-            var current_item = {
-                $item: null,
-                original_index: null,
-                new_index: null
-            };
 
             api.current_role = data['current_role'];
 
@@ -102,70 +98,74 @@
                 .addClass('wp-not-current-submenu')
                 .attr('data-ac-menu-item-open', '1');
 
+            // Remove the collapse button
+            $('#collapse-menu').remove();
+
+            api.active_menu = data['current_menu'];
+            console.log(api.active_menu);
+
+            // Setup data on menu items (makes life SO MUCH DANG easier)
+            api.$elements.adminmenu.find('> li').each(function () {
+
+                var menu_item_i = $(this).index(),
+                    menu_item = api.active_menu[menu_item_i],
+                    $submenu = $(this).find('.wp-submenu');
+
+                $(this).data('ac_active_menu_item', menu_item);
+                api.active_menu[menu_item_i].$item = $(this);
+
+                // Submenu
+                if ($submenu.length) {
+                    $submenu.find('> li').each(function () {
+
+                        var submenu_item_i = $(this).index(),
+                            submenu_item;
+
+                        if (submenu_item_i === 0) {
+                            return true;
+                        }
+
+                        // Ignore first item, it is a dummy item
+                        submenu_item_i = submenu_item_i - 1;
+                        submenu_item = api.active_menu[menu_item_i].submenu[submenu_item_i];
+
+                        $(this).data('ac_active_submenu_item', submenu_item);
+                        api.active_menu[menu_item_i].submenu[submenu_item_i].$item = $(this);
+                    });
+                }
+            });
+
+            console.log(api.active_menu);
+
+            // Move items into the trash
+            api.$elements.adminmenu.find('> li').each(function () {
+
+                if (api.active_menu[$(this).index()].remove) {
+                    $(this).appendTo(api.$elements.adminmenu_trash);
+                }
+            });
+
             // Add sortable
             api.$elements.adminmenu
                 .sortable({
                     placeholder: 'ui-sortable-placeholder',
                     axis: 'y',
-                    items: 'li:not(#collapse-menu):not(#ac-interface-launch):not(#ac-interface-adminmenu-trash)',
                     appendTo: 'parent',
-                    start: menu_sort_start,
-                    stop: menu_sort_stop
+                    connectWith: '#ac-interface-adminmenu-trash'
                 })
                 .on('click', 'a', api.disable_anchor)
                 .find('.wp-submenu').sortable({
                     placeholder: 'ui-sortable-placeholder',
-                    axis: 'y',
-                    start: menu_sort_start,
-                    stop: menu_sort_stop
+                    axis: 'y'
                 }
             );
 
-            if (data.custom_menu) {
-                api.active_menu = data.custom_menu;
-            } else {
-                api.active_menu = data.current_menu;
-            }
-
-            /**
-             * Fires on start of dragging menu item.
-             *
-             * @since 0.1.0
-             * @access private
-             *
-             * @var Event e
-             * @var Object ui
-             */
-            function menu_sort_start(e, ui) {
-
-                current_item.$item = ui.item;
-                current_item.original_index = ui.item.index();
-            }
-
-            /**
-             * Fires on stop of dragging menu item.
-             *
-             * @since 0.1.0
-             * @access private
-             *
-             * @var Event e
-             * @var Object ui
-             */
-            function menu_sort_stop(e, ui) {
-
-                current_item.new_index = current_item.$item.index();
-
-                if (current_item.$item.closest('ul').hasClass('wp-submenu')) {
-
-                    // Sub menu
-                    api.active_menu[current_item.$item.closest('.wp-has-submenu').index()]['submenu']
-                        .move(current_item.original_index - 1, current_item.new_index - 1);
-                } else {
-
-                    // Menu
-                    api.active_menu.move(current_item.original_index, current_item.new_index);
-                }
-            }
+            // Trash sortable
+            api.$elements.adminmenu_trash.sortable({
+                placeholder: 'ui-sortable-placeholder',
+                axis: 'y',
+                connectWith: '#adminmenu'
+            });
         },
 
         /**
@@ -175,12 +175,65 @@
          */
         save_interface: function () {
 
+            var menu_item_i, menu_item, submenu_item_i, submenu_item, trashed,
+                new_menu = [];
+
+            // TODO Submenu
+
+            for (menu_item_i = 0; menu_item_i < api.active_menu.length; menu_item_i++) {
+
+                menu_item = {
+                    slug: api.active_menu[menu_item_i].slug,
+                    submenu: false
+                };
+
+                trashed = api.active_menu[menu_item_i].$item.closest('#ac-interface-adminmenu-trash').length > 0;
+
+                if (trashed) {
+
+                    // Trashed
+                    menu_item.position = api.active_menu[menu_item_i].$item.index() +
+                        api.$elements.adminmenu.find('> li').length ;
+                    menu_item.remove = true;
+
+                } else {
+
+                    // Not Trashed
+                    menu_item.position = api.active_menu[menu_item_i].$item.index();
+                    menu_item.remove = false;
+                }
+
+                // Submenu
+                if (api.active_menu[menu_item_i].submenu) {
+
+                    menu_item.submenu = [];
+                    for (submenu_item_i = 0; submenu_item_i < api.active_menu[menu_item_i].submenu.length; submenu_item_i++) {
+
+                        submenu_item = {
+                            slug: api.active_menu[menu_item_i].submenu[submenu_item_i].slug,
+                            remove: false // TODO Remove
+                        };
+
+                        // Subtract 1 because of invisible first submenu item
+                        submenu_item.position = api.active_menu[menu_item_i].submenu[submenu_item_i].$item.index() - 1;
+                        console.log(submenu_item.slug);
+                        console.log(api.active_menu[menu_item_i].submenu[submenu_item_i].$item);
+
+                        menu_item.submenu.push(submenu_item);
+                    }
+                }
+
+                new_menu.push(menu_item);
+            }
+
+            console.log(new_menu);
+
             $.post(
                 ajaxurl,
                 {
                     action: 'ac-save-interface',
                     role: api.current_role,
-                    menu: api.active_menu,
+                    menu: new_menu,
                     ac_nonce: data.nonce
                 },
                 function (response) {
@@ -188,6 +241,36 @@
                     switch (response['status']) {
                         case 'success':
                             alert('success');
+                            break;
+
+                        case 'fail':
+                            alert(response['error_msg']);
+                            break;
+                    }
+                }
+            );
+        },
+
+        /**
+         * Reset the interface to default values (deletes the DB option).
+         *
+         * @since 0.1.0
+         */
+        reset_interface: function () {
+
+            $.post(
+                ajaxurl,
+                {
+                    action: 'ac-reset-interface',
+                    role: api.current_role,
+                    ac_nonce: data.nonce
+                },
+                function (response) {
+
+                    switch (response['status']) {
+                        case 'success':
+                            alert('success');
+                            window.location.reload();
                             break;
 
                         case 'fail':
@@ -209,62 +292,6 @@
                     ac_customize: 1,
                     ac_current_role: $(this).val()
                 });
-        },
-
-        /**
-         * Toggles an admin menu item visibility.
-         *
-         * @since 0.1.0
-         */
-        toggle_menu_item_visibility: function () {
-
-            var $menu_item = $(this).closest('li'),
-                menu_item_index = $menu_item.index(),
-                submenu_item_index,
-                submenu = $(this).closest('ul').hasClass('wp-submenu'),
-                set_visibility_to = $menu_item.hasClass('ac-hidden') ? 'visible' : 'hidden';
-
-            if (submenu) {
-
-                submenu_item_index = menu_item_index - 1; // Account for first hidden submenu item
-                menu_item_index = $menu_item.closest('li.wp-has-submenu').index();
-
-                api.active_menu[menu_item_index].submenu[submenu_item_index].remove = set_visibility_to != 'visible';
-            } else {
-
-                api.active_menu[menu_item_index].remove = set_visibility_to != 'visible';
-            }
-
-            $menu_item.toggleClass('ac-hidden');
-        },
-
-        /**
-         * Sets all menu and submenu items initial visibility classes.
-         *
-         * @since 0.1.0
-         */
-        set_menu_items_visibility: function () {
-
-            if (!data.custom_menu) {
-                return;
-            }
-
-            $.each(api.active_menu, function (menu_item_i, menu_item) {
-
-                if (menu_item['remove']) {
-                    api.$elements.adminmenu.find('> li').eq(menu_item_i).addClass('ac-hidden');
-                }
-
-                if (menu_item['submenu']) {
-                    $.each(menu_item['submenu'], function (submenu_item_i, submenu_item) {
-
-                        if (submenu_item['remove']) {
-                            api.$elements.adminmenu.find('> li').eq(menu_item_i)
-                                .find('li').eq(submenu_item_i + 1).addClass('ac-hidden'); // +1 because of invisible first submenu item
-                        }
-                    });
-                }
-            });
         },
 
         /**

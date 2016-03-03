@@ -23,6 +23,15 @@ defined( 'ABSPATH' ) || die();
 class AC_Customize_AdminMenu {
 
 	/**
+	 * The current admin menu.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @var array|bool
+	 */
+	public $current_menu = false;
+
+	/**
 	 * The custom admin menu for the current role, if set.
 	 *
 	 * @since 0.1.0
@@ -43,11 +52,7 @@ class AC_Customize_AdminMenu {
 		add_action( 'admin_init', array( $this, 'custom_submenu_order' ) );
 
 		if ( ! isset( $_REQUEST['ac_customize'] ) ) {
-
 			add_action( 'admin_init', array( $this, 'remove_menu_items' ), 100 );
-		} else {
-
-			add_action( 'admin_menu', array( $this, 'add_menu_visibility_HTML' ) );
 		}
 	}
 
@@ -81,7 +86,7 @@ class AC_Customize_AdminMenu {
 		}
 
 		// Simply use our custom menu as the sorting mechanism
-		$custom_menu_order = wp_list_pluck( $this->custom_menu, 'slug' );
+		$custom_menu_order = wp_list_pluck( $this->custom_menu, 'slug', 'position' );
 
 		return $custom_menu_order;
 	}
@@ -111,7 +116,7 @@ class AC_Customize_AdminMenu {
 
 				$custom_submenu_order = $this->custom_menu[ array_search( $menu_slug, $custom_menu_order ) ]['submenu'];
 
-				$menu_order         = array_flip( wp_list_pluck( $custom_submenu_order, 'slug' ) );
+				$menu_order         = array_flip( wp_list_pluck( $custom_submenu_order, 'slug', 'position' ) );
 				$default_menu_order = array_flip( wp_list_pluck( $submenu[ $menu_slug ], 2 ) );
 
 				usort( $submenu[ $menu_slug ], 'sort_menu' );
@@ -148,29 +153,6 @@ class AC_Customize_AdminMenu {
 						unset( $submenu[ $menu[ $menu_item['position'] ][2] ][ $submenu_item['position'] ] );
 					}
 				}
-			}
-		}
-	}
-
-	/**
-	 * Adds on some HTML for use in the Interface for toggling visibility.
-	 *
-	 * @since 0.1.0
-	 * @access private
-	 */
-	function add_menu_visibility_HTML() {
-
-		global $menu, $submenu;
-
-		$visibility_HTML = '<span class="ac-visibility"><span class="ac-visible dashicons dashicons-visibility"></span><span class="ac-hidden dashicons dashicons-hidden"></span></span>';
-
-		foreach ( $menu as $i => $menu_item ) {
-			$menu[ $i ][0] .= $visibility_HTML;
-		}
-
-		foreach ( $submenu as $menu_item => $submenu_items ) {
-			foreach ( $submenu_items as $i => $submenu_item ) {
-				$submenu[ $menu_item ][ $i ][0] .= $visibility_HTML;
 			}
 		}
 	}

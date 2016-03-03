@@ -49,3 +49,17 @@ function ac_string_to_bool( $input ) {
 
 	return $input;
 }
+
+/**
+ * Sorts an array by the "position" value (used in usort() or uasort()).
+ *
+ * @since 0.1.0
+ *
+ * @param $a
+ * @param $b
+ *
+ * @return mixed
+ */
+function ac_sort_by_position( $a, $b ) {
+	return $a['position'] - $b['position'];
+}

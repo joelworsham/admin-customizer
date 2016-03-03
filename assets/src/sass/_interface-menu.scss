@@ -47,58 +47,13 @@ body.ac-customize {
         z-index: 100;
       }
     }
-
-    li {
-      &.ac-hidden {
-        > a {
-          color: #666;
-
-          .wp-menu-image {
-            &:before {
-              color: inherit;
-            }
-          }
-        }
-
-        span.ac-visibility {
-          span.ac-visible {
-            display: none;
-          }
-        }
-
-        .wp-submenu {
-          a {
-            color: #666;
-          }
-        }
-      }
-
-      &:not(.ac-hidden) {
-        > a {
-          span.ac-visibility {
-            span.ac-hidden {
-              display: none;
-            }
-          }
-        }
-      }
-
-      a {
-        padding-left: 20px;
-      }
-
-      span.ac-visibility {
-        position: absolute;
-        left: 0;
-      }
-    }
   }
 
   #collapse-menu {
     display: none;
   }
 
-  #ac-interface-adminmenu-trash {
+  .ac-interface-adminmenu-trash-container {
     color: #eee;
     font-size: 14px;
     margin-top: 1em;
@@ -107,6 +62,12 @@ body.ac-customize {
     ul {
       border: 1px solid;
       min-height: 34px;
+
+      li {
+        .wp-submenu {
+          display: none !important;
+        }
+      }
     }
   }
 }

@@ -16,6 +16,7 @@ defined( 'ABSPATH' ) || die();
 
 <div id="ac-interface-toolbar">
 	<div data-ac-interface-save class="button">Save</div>
+	<div data-ac-interface-reset class="button">Reset</div>
 	<a href="<?php echo remove_query_arg( array( 'ac_customize', 'ac_current_role' ) ); ?>" class="button">Exit</a>
 
 	<?php if ( $roles ) : ?>

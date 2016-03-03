@@ -1,0 +1,57 @@
+/**!
+Admin Customizer Styles
+
+@since 0.1.0
+*/
+/*
+Styles the interface.
+
+@since 0.1.0
+*/
+#ac-interface-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 50px;
+  background-color: #555;
+  color: #fff;
+  z-index: 100; }
+
+/*
+Interface admin menu styles.
+
+@since 0.1.0
+*/
+body.ac-customize #adminmenu .wp-menu-separator {
+  height: 34px;
+  margin: 0;
+  cursor: pointer; }
+  body.ac-customize #adminmenu .wp-menu-separator:hover {
+    background-color: #191e23; }
+body.ac-customize #adminmenu > .ui-sortable-placeholder {
+  height: 30px;
+  border-top: 2px dashed #43515f;
+  border-bottom: 2px dashed #43515f; }
+body.ac-customize #adminmenu .wp-submenu .ui-sortable-placeholder {
+  height: 22px;
+  border-top: 2px dashed #43515f;
+  border-bottom: 2px dashed #43515f; }
+body.ac-customize #adminmenu .wp-submenu .ui-sortable-helper {
+  background-color: #32373c;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
+  z-index: 100; }
+body.ac-customize #collapse-menu {
+  display: none; }
+body.ac-customize .ac-interface-adminmenu-trash-container {
+  color: #eee;
+  font-size: 14px;
+  margin-top: 1em;
+  text-align: center; }
+  body.ac-customize .ac-interface-adminmenu-trash-container ul {
+    border: 1px solid;
+    min-height: 34px; }
+    body.ac-customize .ac-interface-adminmenu-trash-container ul li .wp-submenu {
+      display: none !important; }
+/*# sourceMappingURL=admin-customizer.min.css.map */

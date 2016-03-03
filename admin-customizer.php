@@ -31,7 +31,9 @@ if ( ! class_exists( 'AC' ) ) {
 		private $admin;
 
 		/**
-		 * The interface module.
+		 * The Interface module.
+		 *
+		 * The Interface is the "Customizer" for the backend of WP.
 		 *
 		 * @since 0.1.0
 		 *
@@ -94,29 +96,6 @@ if ( ! class_exists( 'AC' ) ) {
 
 			$this->admin     = new AC_Admin();
 			$this->interface = new AC_Interface();
-
-			// REMOVE
-			add_action( 'admin_menu', function () {
-//
-//				global $menu, $submenu;
-				add_menu_page(
-					'Test',
-					'Test',
-					'manage_options',
-					'test',
-						'',
-						'',
-						10
-				);
-//
-//				add_submenu_page(
-//					'test',
-//					'Testing',
-//					'Testing',
-//					'manage_options',
-//					'testing'
-//				);
-			}, 1000 );
 		}
 
 		/**
