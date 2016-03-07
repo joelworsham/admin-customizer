@@ -24,21 +24,21 @@ Interface admin menu styles.
 
 @since 0.1.0
 */
-body.ac-customize #adminmenu .wp-menu-separator {
+body.ac-customize #adminmenuwrap .wp-menu-separator {
   height: 34px;
   margin: 0;
   cursor: pointer; }
-  body.ac-customize #adminmenu .wp-menu-separator:hover {
+  body.ac-customize #adminmenuwrap .wp-menu-separator:hover {
     background-color: #191e23; }
-body.ac-customize #adminmenu > .ui-sortable-placeholder {
+body.ac-customize #adminmenuwrap .ui-sortable-placeholder {
   height: 30px;
   border-top: 2px dashed #43515f;
   border-bottom: 2px dashed #43515f; }
-body.ac-customize #adminmenu .wp-submenu .ui-sortable-placeholder {
+body.ac-customize #adminmenuwrap .wp-submenu .ui-sortable-placeholder {
   height: 22px;
   border-top: 2px dashed #43515f;
   border-bottom: 2px dashed #43515f; }
-body.ac-customize #adminmenu .wp-submenu .ui-sortable-helper {
+body.ac-customize #adminmenuwrap .wp-submenu .ui-sortable-helper {
   background-color: #32373c;
   box-shadow: 0 3px 5px rgba(0, 0, 0, 0.2);
   z-index: 100; }
@@ -47,11 +47,122 @@ body.ac-customize #collapse-menu {
 body.ac-customize .ac-interface-adminmenu-trash-container {
   color: #eee;
   font-size: 14px;
-  margin-top: 1em;
-  text-align: center; }
-  body.ac-customize .ac-interface-adminmenu-trash-container ul {
-    border: 1px solid;
-    min-height: 34px; }
-    body.ac-customize .ac-interface-adminmenu-trash-container ul li .wp-submenu {
-      display: none !important; }
+  margin-top: 2em; }
+  body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash-title {
+    color: #888;
+    font-style: italic;
+    margin: 0 0 0.5em 9px;
+    line-height: 20px; }
+    body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash-title .dashicons {
+      line-height: 20px; }
+  body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash {
+    min-height: 34px;
+    margin: 0; }
+    body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash:after {
+      content: attr(data-emptystring);
+      margin: auto;
+      position: absolute;
+      top: 0;
+      left: 9px;
+      bottom: 0;
+      right: 0;
+      height: 1em;
+      color: #888;
+      display: none; }
+    body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash.empty {
+      position: relative;
+      border-top: 3px dashed #888;
+      border-bottom: 3px dashed #888; }
+      body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash.empty:after {
+        display: block; }
+    body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li {
+      min-height: 34px;
+      text-align: left;
+      color: #888;
+      margin: 0; }
+      body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li:focus, body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li:hover {
+        background-color: #191e23;
+        color: #00b9eb; }
+      body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li a {
+        text-decoration: none;
+        color: inherit; }
+      body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li .wp-menu-image {
+        float: left;
+        width: 36px;
+        height: 34px;
+        margin: 0;
+        text-align: center; }
+      body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li .wp-menu-name {
+        padding: 8px 0; }
+        body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li .wp-menu-name span[class*="count"] {
+          display: none; }
+      body.ac-customize .ac-interface-adminmenu-trash-container .ac-interface-adminmenu-trash li .wp-submenu {
+        display: none !important; }
+
+/*
+Interface widgets toolbar.
+
+@since 0.1.0
+*/
+#ac-interface-widgets-toolbar {
+  margin-bottom: 30px; }
+  #ac-interface-widgets-toolbar:after {
+    content: ' ';
+    display: table;
+    clear: both; }
+  #ac-interface-widgets-toolbar .ac-interface-widgets-title {
+    color: #aaa;
+    font-style: italic;
+    margin: 0 0 0.5em;
+    line-height: 20px;
+    text-align: center; }
+    #ac-interface-widgets-toolbar .ac-interface-widgets-title .dashicons {
+      line-height: 20px; }
+  #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container {
+    float: left;
+    width: 50%; }
+    #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash {
+      min-height: 100px;
+      box-sizing: border-box; }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash:after {
+        content: attr(data-emptystring);
+        margin: auto;
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        height: 1em;
+        width: 200px;
+        text-align: center;
+        color: #ccc;
+        font-size: 18px;
+        display: none; }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash.empty {
+        position: relative;
+        border: 3px dashed #b4b9be; }
+        #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash.empty:after {
+          display: block; }
+    #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .postbox {
+      margin-bottom: 0 !important; }
+  #ac-interface-widgets-toolbar .ac-interface-widgets-add-new {
+    float: right;
+    width: 50%;
+    min-height: 100px;
+    box-sizing: border-box; }
+    #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .handlediv {
+      position: absolute;
+      right: 0; }
+    #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-widget-title {
+      display: table;
+      width: 100%;
+      padding: 3px 36px 3px 12px;
+      box-sizing: border-box; }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-widget-title .ac-widget-title-text {
+        display: table-cell; }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-widget-title .ac-widget-title-input {
+        display: table-cell;
+        width: 100%; }
+    #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-widget-inside {
+      display: none; }
 /*# sourceMappingURL=admin-customizer.min.css.map */

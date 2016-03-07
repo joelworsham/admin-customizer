@@ -50,6 +50,15 @@ class AC_Interface {
 	private $current_role_caps;
 
 	/**
+	 * All widgets created (for getting instances).
+	 *
+	 * @since 0.1.0
+	 *
+	 * @var int
+	 */
+	public static $widgets;
+
+	/**
 	 * AC_Interface constructor.
 	 *
 	 * @since 0.1.0
@@ -57,29 +66,24 @@ class AC_Interface {
 	function __construct() {
 
 		$this->customize_adminmenu = new AC_Customize_AdminMenu();
+		$this->default_widgets();
 
 		add_action( 'init', array( $this, 'setup_role' ), 1 );
 		add_action( 'init', array( $this, 'get_customizations' ) );
 		add_action( 'wp_ajax_ac-save-interface', array( $this, 'ajax_save_interface' ) );
 		add_action( 'wp_ajax_ac-reset-interface', array( $this, 'ajax_reset_interface' ) );
+		add_action( 'wp_ajax_ac-add-widget', array( $this, 'ajax_add_widget' ) );
 
 		if ( isset( $_REQUEST['ac_customize'] ) ) {
 
 			add_action( 'admin_init', array( $this, 'get_adminmenu' ) );
 			add_action( 'admin_init', array( $this, 'sync_custom_menu' ), 50 );
 			add_action( 'admin_init', array( $this, 'setup_data' ), 100 );
-//			add_action( 'admin_menu', function () {
-//
-//				global $menu, $submenu;
-//
-//				foreach ( $menu as $menu_item_i => $menu_item ) {
-//
-//					$menu[ $menu_item_i ][0] .= "<input type=\"hidden\" name=\"ac_menu[$menu_item[2]]\" \>";
-//				}
-//			});
+			add_action( 'admin_init', array( $this, 'translations' ) );
 			add_filter( 'admin_body_class', array( $this, 'body_class' ) );
-			add_action( 'admin_footer', array( $this, 'interface_toolbar_HTML' ) );
 			add_action( 'adminmenu', array( $this, 'interface_adminmenu_trash_HTML' ) );
+			add_action( 'welcome_panel', array( $this, 'interface_widgets_toolbar_HTML' ), 1000 );
+			add_action( 'admin_footer', array( $this, 'interface_toolbar_HTML' ) );
 
 			if ( isset( $_REQUEST['ac_current_role'] ) ) {
 				add_action( 'user_has_cap', array( $this, 'modify_role_capabilities' ), 10, 4 );
@@ -88,6 +92,29 @@ class AC_Interface {
 
 			add_action( 'adminmenu', array( $this, 'launch_interface_HTML' ) );
 		}
+	}
+
+	/**
+	 * Adds default AC widgets.
+	 *
+	 * @since 0.1.0
+	 */
+	private function default_widgets() {
+
+		new AC_Widget_Text();
+	}
+
+	/**
+	 * Add interface translations to JS.
+	 *
+	 * @since 0.1.0
+	 * @access private
+	 */
+	function translations() {
+
+		AC()->add_script_data( 'interfaceL10n', array(
+			'adminmenuTrashEmpty' => __( 'Drag items here', 'AC' ),
+		) );
 	}
 
 	/**
@@ -117,6 +144,24 @@ class AC_Interface {
 	}
 
 	/**
+	 * Outputs the interface widgets toolbar HTML.
+	 *
+	 * This is hooked into 'welcome_panel" because there are no other actions to hook into that allow placing any HTML
+	 * into the dashboard section. By hooking here and closing off the welcome panel, it's possible to unobtrusively
+	 * add some HTML after the welcome panel and above the dashboard widgets.
+	 *
+	 * @since 0.1.0
+	 * @access private
+	 */
+	function interface_widgets_toolbar_HTML() {
+
+		// Close off the welcome panel so we can start a custom <div>
+		echo '</div>';
+
+		include_once __DIR__ . '/views/html-interface-widgets-toolbar.php';
+	}
+
+	/**
 	 * Outputs the interface's launch button HTML.
 	 *
 	 * @since 0.1.0
@@ -139,7 +184,7 @@ class AC_Interface {
 		AC()->add_script_data( 'current_role', $this->current_role );
 		AC()->add_script_data( 'nonce', wp_create_nonce( 'ac-nonce' ) );
 
-		if ($this->customize_adminmenu->custom_menu) {
+		if ( $this->customize_adminmenu->custom_menu ) {
 			AC()->add_script_data( 'current_menu', $this->customize_adminmenu->custom_menu );
 		} else {
 			AC()->add_script_data( 'current_menu', $this->customize_adminmenu->current_menu );
@@ -443,6 +488,85 @@ class AC_Interface {
 				'status'    => 'fail',
 				'error_msg' => 'Option does not exist.',
 			) );
+		}
+	}
+
+	/**
+	 * Adds a widget to the interface.
+	 *
+	 * @since 0.1.0
+	 * @access private
+	 */
+	function ajax_add_widget() {
+
+		if ( ! isset( $_REQUEST['widget'] ) ) {
+
+			wp_send_json( array(
+				'status'    => 'fail',
+				'error_msg' => 'Could not get widget',
+			) );
+		}
+
+		if ( ! check_ajax_referer( 'ac-nonce', 'ac_nonce' ) ) {
+
+			wp_send_json( array(
+				'status'    => 'fail',
+				'error_msg' => 'Could not verify security',
+			) );
+		}
+
+		$widget = $_REQUEST['widget'];
+
+		// Get widget properties
+		$ID       = $widget['widget_id'];
+		unset( $widget['widget_id'] );
+//		$name    = $widget['widget_name'];
+		unset( $widget['widget_name'] );
+		$instance = $widget['widget_instance'];
+		unset( $widget['widget_instance'] );
+
+//		$title = $widget['title'];
+
+		ob_start();
+		self::$widgets[ $ID ][ $instance ]->output( $widget );
+		$output = ob_get_clean();
+
+		ob_start();
+		self::$widgets[ $ID ][ $instance ]->form();
+		$form = ob_get_clean();
+
+		wp_send_json( array(
+				'status' => 'success',
+				'form'   => $form,
+				'output' => $output,
+			)
+		);
+	}
+
+	/**
+	 * Shows AC widgets.
+	 *
+	 * @since 0.1.0
+	 * @access private
+	 */
+	private function show_ac_widgets() {
+
+		global $wp_meta_boxes;
+
+		if ( empty( $wp_meta_boxes['dashboard']['ac_new'] ) ) {
+			return 'no widgets';
+		}
+
+		// Store and unset so they don't get printed out
+		$ac_meta_boxes = $wp_meta_boxes['dashboard']['ac_new']['default'];
+		unset( $wp_meta_boxes['dashboard']['ac_new'] );
+
+		foreach ( $ac_meta_boxes as $widget ) {
+
+			/** @var AC_Dashboard_Widget $widget_object */
+			$widget_object = $widget['args']['widget'];
+
+			include __DIR__ . '/views/html-interface-widgets-new.php';
 		}
 	}
 }

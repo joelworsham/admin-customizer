@@ -15,8 +15,11 @@ defined( 'ABSPATH' ) || die();
 </ul>
 
 <div class="ac-interface-adminmenu-trash-container">
-	Trash
-	<ul id="ac-interface-adminmenu-trash">
-<!--		<li class="dummy" data-dummy></li>-->
+	<h2 class="ac-interface-adminmenu-trash-title">
+		<span class="dashicons dashicons-trash"></span>
+		Trash
+	</h2>
+
+	<ul class="ac-interface-adminmenu-trash">
 	</ul>
 </div>

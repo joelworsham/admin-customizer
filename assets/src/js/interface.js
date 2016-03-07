@@ -2,6 +2,8 @@
  Functionality for the interface.
 
  @since 0.1.0
+
+ global postBoxL10n
  */
 
 var AC_Interface;
@@ -63,7 +65,11 @@ var AC_Interface;
         get_elements: function () {
 
             api.$elements.adminmenu = $('#adminmenu');
-            api.$elements.adminmenu_trash = $('#ac-interface-adminmenu-trash');
+            api.$elements.adminmenu_trash = $('.ac-interface-adminmenu-trash');
+            api.$elements.widgets_toolbar = $('#ac-interface-widgets-toolbar');
+            api.$elements.widgets_trash = api.$elements.widgets_toolbar.find('.ac-interface-widgets-trash');
+            api.$elements.widgets_new = api.$elements.widgets_toolbar.find('.ac-interface-widgets-new');
+            api.$elements.dashwidgets = $('#dashboard-widgets').find('.meta-box-sortables');
             api.$elements.toolbar = $('#ac-interface-toolbar');
             api.$elements.save = api.$elements.toolbar.find('[data-ac-interface-save]');
             api.$elements.reset = api.$elements.toolbar.find('[data-ac-interface-reset]');
@@ -91,7 +97,8 @@ var AC_Interface;
 
             api.current_role = data['current_role'];
 
-            // Admin Menu
+            // ADMIN MENU
+
             // Make the currently open menu not open
             api.$elements.adminmenu.find('li, a')
                 .removeClass('wp-has-current-submenu current')
@@ -102,7 +109,6 @@ var AC_Interface;
             $('#collapse-menu').remove();
 
             api.active_menu = data['current_menu'];
-            console.log(api.active_menu);
 
             // Setup data on menu items (makes life SO MUCH DANG easier)
             api.$elements.adminmenu.find('> li').each(function () {
@@ -135,8 +141,6 @@ var AC_Interface;
                 }
             });
 
-            console.log(api.active_menu);
-
             // Move items into the trash
             api.$elements.adminmenu.find('> li').each(function () {
 
@@ -151,7 +155,7 @@ var AC_Interface;
                     placeholder: 'ui-sortable-placeholder',
                     axis: 'y',
                     appendTo: 'parent',
-                    connectWith: '#ac-interface-adminmenu-trash'
+                    connectWith: '.ac-interface-adminmenu-trash'
                 })
                 .on('click', 'a', api.disable_anchor)
                 .find('.wp-submenu').sortable({
@@ -164,8 +168,210 @@ var AC_Interface;
             api.$elements.adminmenu_trash.sortable({
                 placeholder: 'ui-sortable-placeholder',
                 axis: 'y',
-                connectWith: '#adminmenu'
+                connectWith: '#adminmenu',
+                receive: menu_trash_receive,
+                remove: menu_trash_remove
             });
+
+            if (!api.$elements.adminmenu_trash.find('> li').length) {
+                api.$elements.adminmenu_trash.addClass('empty');
+                api.$elements.adminmenu_trash.attr('data-emptyString', data.interfaceL10n.adminmenuTrashEmpty);
+            }
+
+            /**
+             * Fires when the adminmenu trash receives an item.
+             *
+             * @since 0.1.0
+             */
+            function menu_trash_receive(e, ui) {
+                api.$elements.adminmenu_trash.removeClass('empty');
+            }
+
+            /**
+             * Fires when the adminmenu trash removes an item.
+             *
+             * @since 0.1.0
+             */
+            function menu_trash_remove(e, ui) {
+
+                if (!api.$elements.adminmenu_trash.find('> li').length) {
+                    api.$elements.adminmenu_trash.addClass('empty');
+                }
+            }
+
+            // WIDGETS
+
+            // Trash sortable
+            api.$elements.widgets_trash.sortable({
+                containment: false,
+                connectWith: '.meta-box-sortables',
+                placeholder: 'sortable-placeholder',
+                receive: widgets_trash_receive,
+                remove: widgets_trash_remove,
+                over: widgets_trash_over,
+                out: widgets_trash_out
+            });
+
+            if (!api.$elements.widgets_trash.find('> .postbox').length) {
+                api.$elements.widgets_trash.addClass('empty');
+                api.$elements.widgets_trash.attr('data-emptyString', postBoxL10n.postBoxEmptyString);
+            }
+
+            // Prevent opening inside trash
+            api.$elements.widgets_trash.on('click', '.hndle', function (e) {
+                $(this).closest('.postbox').addClass('closed');
+            });
+
+            // Connect the dash widgets with the trash
+            api.$elements.dashwidgets.sortable('option', 'connectWith',
+                api.$elements.dashwidgets.sortable('option', 'connectWith') + ', .ac-interface-widgets-trash'
+            );
+
+            // Add new widgets section
+            api.$elements.widgets_new.find('.meta-box-sortables').removeClass('meta-box-sortables');
+
+            api.$elements.widgets_new.sortable({
+                connectWith: '.meta-box-sortables',
+                placeholder: 'sortable-placeholder',
+                remove: add_new_widget
+            });
+
+            // Prevent collapsing widget inside when clicking "Title" input
+            api.$elements.widgets_new.find('h2.hndle input[name$="_title"]').click(function (e) {
+                e.stopPropagation();
+            });
+
+            /**
+             * Fires when the widgets trash receives an item.
+             *
+             * @since 0.1.0
+             */
+            function widgets_trash_receive(e, ui) {
+
+                ui.item.addClass('closed');
+
+                api.$elements.widgets_trash.removeClass('empty');
+
+                if (!ui.sender.find('.postbox').length) {
+                    ui.sender.addClass('empty-container');
+                    ui.sender.attr('data-emptyString', postBoxL10n.postBoxEmptyString);
+                }
+            }
+
+            /**
+             * Fires when the widgets trash removes an item.
+             *
+             * @since 0.1.0
+             */
+            function widgets_trash_remove(e, ui) {
+
+                ui.item.removeClass('closed');
+
+                if (!api.$elements.widgets_trash.find('> .postbox').length) {
+                    api.$elements.widgets_trash.addClass('empty');
+                    api.$elements.widgets_trash.attr('data-emptyString', postBoxL10n.postBoxEmptyString);
+                }
+            }
+
+            /**
+             * Fires when the widgets trash has an item hover over it.
+             *
+             * @since 0.1.0
+             */
+            function widgets_trash_over(e, ui) {
+
+                ui.placeholder.height(ui.helper.find('.hndle').outerHeight());
+                ui.helper.addClass('closed')
+                    .height(ui.helper.find('.hndle').outerHeight());
+            }
+
+            /**
+             * Fires when the widgets trash has an item leave it.
+             *
+             * @since 0.1.0
+             */
+            function widgets_trash_out(e, ui) {
+
+                // Sometimes out fires when it shouldn't
+                if (!ui.helper) {
+                    return;
+                }
+
+                ui.helper.removeClass('closed')
+                    .height('auto')
+                    .width(api.$elements.dashwidgets.width());
+            }
+
+            /**
+             * Fires when the widgets new has an item removed.
+             *
+             * @since 0.1.0
+             */
+            function add_new_widget(e, ui) {
+
+                var $widget = ui.item,
+                    $receiver = ui.item.closest('.ui-sortable'),
+                    $form = $widget.find('.ac-widget-form'),
+                    new_index = $widget.index(),
+                    args = {};
+
+                // TODO Handle checkboxes/radios
+                if ($form.length) {
+                    $.each($form.serializeArray(), function (i, object) {
+                        args[object.name] = object.value;
+                    });
+                }
+
+                args.title = $widget.find('[name="ac_widget_title"]').val();
+
+                e.preventDefault();
+
+                $.post(
+                    ajaxurl,
+                    {
+                        action: 'ac-add-widget',
+                        widget: args,
+                        ac_nonce: data.nonce
+                    },
+                    function (response) {
+
+                        var $item_at_index,
+                            $new_widget = $widget.clone(true);
+
+                        if (response['status'] == 'success') {
+
+                            // Reset widget form
+                            $widget.find('.ac-widget-form-custom').html(response['form']);
+                            $widget.find('[name="ac_widget_title"]').val('');
+                            $widget.addClass('closed');
+
+                            // Prepare new widget
+                            $new_widget.find('.ac-widget-inside').html(response['output']);
+                            $new_widget.find('.ac-widget-title-text').html(args.title ? args.title : args.widget_name);
+                            $new_widget.find('.ac-widget-form').remove();
+                            $new_widget.find('.ac-widget-title-input').remove();
+                            $new_widget.removeClass('closed');
+
+                            // Place new widget into dash widgets
+                            $item_at_index = $receiver.find('> div.postbox:eq(' + new_index + ')');
+                            if ($item_at_index.length) {
+                                $item_at_index.before($new_widget);
+                            } else {
+                                $receiver.append($new_widget);
+                            }
+
+                        } else if (response['status'] == 'fail') {
+
+                            if (response['error_msg']) {
+                                alert(response['error_msg']);
+                            }
+
+                        } else {
+                            alert('Could not complete for unknown reasons');
+                        }
+                    }
+                );
+            }
         },
 
         /**
@@ -187,13 +393,13 @@ var AC_Interface;
                     submenu: false
                 };
 
-                trashed = api.active_menu[menu_item_i].$item.closest('#ac-interface-adminmenu-trash').length > 0;
+                trashed = api.active_menu[menu_item_i].$item.closest('.ac-interface-adminmenu-trash').length > 0;
 
                 if (trashed) {
 
                     // Trashed
                     menu_item.position = api.active_menu[menu_item_i].$item.index() +
-                        api.$elements.adminmenu.find('> li').length ;
+                        api.$elements.adminmenu.find('> li').length;
                     menu_item.remove = true;
 
                 } else {
@@ -216,17 +422,12 @@ var AC_Interface;
 
                         // Subtract 1 because of invisible first submenu item
                         submenu_item.position = api.active_menu[menu_item_i].submenu[submenu_item_i].$item.index() - 1;
-                        console.log(submenu_item.slug);
-                        console.log(api.active_menu[menu_item_i].submenu[submenu_item_i].$item);
-
                         menu_item.submenu.push(submenu_item);
                     }
                 }
 
                 new_menu.push(menu_item);
             }
-
-            console.log(new_menu);
 
             $.post(
                 ajaxurl,

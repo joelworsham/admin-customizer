@@ -1,0 +1,98 @@
+/*
+Interface widgets toolbar.
+
+@since 0.1.0
+*/
+
+#ac-interface-widgets-toolbar {
+  margin-bottom: 30px;
+
+  &:after {
+    content: ' ';
+    display: table;
+    clear: both;
+  }
+
+  .ac-interface-widgets-title {
+    color: #aaa;
+    font-style: italic;
+    margin: 0 0 0.5em;
+    line-height: 20px;
+    text-align: center;
+
+    .dashicons {
+      line-height: 20px;
+    }
+  }
+
+  .ac-interface-widgets-trash-container {
+    float: left;
+    width: 50%;
+
+    .ac-interface-widgets-trash {
+      min-height: 100px;
+      box-sizing: border-box;
+
+      &:after {
+        content: attr(data-emptystring);
+        margin: auto;
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        height: 1em;
+        width: 200px;
+        text-align: center;
+        color: #ccc;
+        font-size: 18px;
+        display: none;
+      }
+
+      &.empty {
+        position: relative;
+        border: 3px dashed #b4b9be;
+
+        &:after {
+          display: block;
+        }
+      }
+    }
+
+    .postbox {
+      margin-bottom: 0 !important;
+    }
+  }
+
+  .ac-interface-widgets-add-new {
+    float: right;
+    width: 50%;
+    min-height: 100px;
+    box-sizing: border-box;
+
+    .handlediv {
+      position: absolute;
+      right: 0;
+    }
+
+    .ac-widget-title {
+      display: table;
+      width: 100%;
+      padding: 3px 36px 3px 12px;
+      box-sizing: border-box;
+
+      .ac-widget-title-text {
+        display: table-cell;
+      }
+
+      .ac-widget-title-input {
+        display: table-cell;
+        width: 100%;
+      }
+    }
+
+    .ac-widget-inside {
+      display: none;
+    }
+  }
+}
