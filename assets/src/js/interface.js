@@ -64,6 +64,15 @@ var AC_Interface;
         cover_timer: 0,
 
         /**
+         * Indicates whether options have been changed since load.
+         *
+         * @since 0.1.0
+         *
+         * @var boolean
+         */
+        unsaved_changes: false,
+
+        /**
          * Initializes the interface.
          *
          * @since 0.1.0
@@ -83,6 +92,7 @@ var AC_Interface;
         get_elements: function () {
 
             api.$elements.adminmenu = $('#adminmenu');
+            api.$elements.toolbar = $('#wpadminbar');
             api.$elements.adminmenu_trash = $('.ac-interface-adminmenu-trash');
             api.$elements.widgets_toolbar = $('#ac-interface-widgets-toolbar');
             api.$elements.widgets_trash = api.$elements.widgets_toolbar.find('.ac-interface-widgets-trash');
@@ -93,6 +103,7 @@ var AC_Interface;
             api.$elements.cover = $('#ac-interface-cover');
             api.$elements.save = api.$elements.toolbar.find('[data-ac-interface-save]');
             api.$elements.reset = api.$elements.toolbar.find('[data-ac-interface-reset]');
+            api.$elements.exit = api.$elements.toolbar.find('[data-ac-interface-exit]');
             api.$elements.select_role = api.$elements.toolbar.find('[data-ac-interface-select-role]');
         },
 
@@ -104,6 +115,7 @@ var AC_Interface;
         setup_handlers: function () {
 
             api.$elements.save.click(api.save_interface);
+            api.$elements.exit.click(api.exit_interface);
             api.$elements.reset.click(api.reset_interface);
             api.$elements.select_role.change(api.change_role);
 
@@ -122,8 +134,6 @@ var AC_Interface;
          * @since 0.1.0
          */
         launch_interface: function () {
-
-            var trashed_widgets, $trashed_widget, i;
 
             api.current_role = data['current_role'];
 
@@ -190,7 +200,8 @@ var AC_Interface;
                     placeholder: 'ui-sortable-placeholder',
                     axis: 'y',
                     appendTo: 'parent',
-                    connectWith: '.ac-interface-adminmenu-trash'
+                    connectWith: '.ac-interface-adminmenu-trash',
+                    change: menu_sort_stop,
                 })
                 .on('click', 'a', api.disable_anchor)
                 .find('.wp-submenu').sortable({
@@ -214,11 +225,23 @@ var AC_Interface;
             }
 
             /**
+             * Fires when the adminmenu sort stops.
+             *
+             * @since 0.1.0
+             */
+            function menu_sort_stop() {
+                api.unsaved_changes = true;
+            }
+
+            /**
              * Fires when the adminmenu trash receives an item.
              *
              * @since 0.1.0
              */
             function menu_trash_receive(e, ui) {
+
+                api.unsaved_changes = true;
+
                 api.$elements.adminmenu_trash.removeClass('empty');
             }
 
@@ -229,23 +252,35 @@ var AC_Interface;
              */
             function menu_trash_remove(e, ui) {
 
+                api.unsaved_changes = true;
+
                 if (!api.$elements.adminmenu_trash.find('> li').length) {
                     api.$elements.adminmenu_trash.addClass('empty');
                 }
             }
 
             // WIDGETS
+
+            // Move widgets toolbar
+            api.$elements.widgets_toolbar.insertBefore('#dashboard-widgets-wrap');
+
+            // Get dash widgets
             api.dash_widgets = data['dash_widgets'];
 
             // Add edit HTML to each title
             api.$elements.dashwidgets.find('h2.hndle').append($('#ac-interface-widget-edit-actions').html());
 
             // Move to trash
-            trashed_widgets = data['trashed_widgets'];
-            if (trashed_widgets) {
-                for (i = 0; i < trashed_widgets.length; i++) {
+            if (api.dash_widgets) {
+                $.each(api.dash_widgets, function (widget_ID, widget) {
 
-                    $trashed_widget = $('#' + trashed_widgets[i]);
+                    var $trashed_widget;
+
+                    if (!widget['trashed']) {
+                        return true;
+                    }
+
+                    $trashed_widget = $('#' + widget_ID);
                     if ($trashed_widget.length) {
                         $trashed_widget.addClass('closed')
                             .appendTo(api.$elements.widgets_trash)
@@ -253,7 +288,7 @@ var AC_Interface;
                             .append('<span class="ac-interface-widget-trashed-postfix"> '
                                 + data['interfaceL10n']['widgetsTrashPostfixWP'] + '</span>');
                     }
-                }
+                });
             }
 
             // Trash sortable
@@ -303,9 +338,11 @@ var AC_Interface;
              */
             function widgets_trash_receive(e, ui) {
 
-                var message = ui.item.attr('id').indexOf('ac-widget-') !== -1 ?
+                var message = ui.item.filter('[id^="ac-widget-"]').length ?
                     data['interfaceL10n']['widgetsTrashPostfixAC'] :
                     data['interfaceL10n']['widgetsTrashPostfixWP'];
+
+                api.unsaved_changes = true;
 
                 ui.item.addClass('closed');
 
@@ -325,6 +362,14 @@ var AC_Interface;
              * @since 0.1.0
              */
             function widgets_trash_remove(e, ui) {
+
+                var widget_args = api.dash_widgets[ui.item.attr('id')];
+
+                api.unsaved_changes = true;
+
+                if (widget_args) {
+                    delete widget_args['trashed'];
+                }
 
                 ui.item.removeClass('closed');
 
@@ -377,10 +422,12 @@ var AC_Interface;
                     widget_args = {},
                     widget_index, widget_ID, $new_widget;
 
+                api.unsaved_changes = true;
+
                 // TODO Handle checkboxes/radios
                 if ($form.length) {
                     $.each($form.serializeArray(), function (i, object) {
-                        widget_args[object.name] = object.value;
+                            widget_args[object.name] = object.value;
                     });
                 }
 
@@ -440,11 +487,11 @@ var AC_Interface;
                                 break;
 
                             case 'fail':
-                                alert( response['error_msg']);
+                                alert(response['error_msg']);
                                 break;
 
                             default:
-                                alert( 'Could not complete for unknown reasons.');
+                                alert('Could not complete for unknown reasons.');
                         }
 
                         api.hide_cover();
@@ -506,11 +553,11 @@ var AC_Interface;
                                 break;
 
                             case 'fail':
-                                alert( response['error_msg']);
+                                alert(response['error_msg']);
                                 break;
 
                             default:
-                                alert( 'Could not complete for unknown reasons.');
+                                alert('Could not complete for unknown reasons.');
                         }
 
                         begin_editing_widget();
@@ -531,7 +578,8 @@ var AC_Interface;
 
                 // Make sure placeholder is scrolled into view
                 $('html, body').animate({
-                    scrollTop: $widget_placeholder.offset().top
+                    scrollTop: $widget_placeholder.offset().top -
+                    (api.$elements.toolbar.length ? api.$elements.toolbar.height() : 0)
                 });
             }
         },
@@ -547,6 +595,8 @@ var AC_Interface;
                 $widget = $('#' + $widget_placeholder.attr('data-id')),
                 $form = $widget_placeholder.find('.ac-widget-form'),
                 widget_args = api.dash_widgets[$widget.attr('id')];
+
+            api.unsaved_changes = true;
 
             // Title
             widget_args['title'] = $widget_placeholder.find('h2.hndle input[type="text"]').val();
@@ -587,11 +637,11 @@ var AC_Interface;
                                 break;
 
                             case 'fail':
-                                alert( response['error_msg']);
+                                alert(response['error_msg']);
                                 break;
 
                             default:
-                                alert( 'Could not complete for unknown reasons.');
+                                alert('Could not complete for unknown reasons.');
                         }
 
                         api.hide_cover();
@@ -617,25 +667,13 @@ var AC_Interface;
          */
         cancel_edit_widget: function () {
 
-            var $widget = $(this).closest('.postbox'),
-                widget_settings = $widget.data('ac_widget_settings');
+            var $widget_placeholder = $(this).closest('.postbox'),
+                $widget = $('#' + $widget_placeholder.attr('data-id'));
 
-            // Force open
-            $(this).closest('.postbox').removeClass('closed');
+            $widget.removeClass('closed').show();
+            $widget_placeholder.remove();
 
-            // Reset settings
-            $widget.find('h2.hndle span').first().html(widget_settings['title']);
-
-            if (widget_settings['inside_HTML']) {
-                $widget.find('.inside').replaceWith(widget_settings['inside_HTML']);
-            }
-
-            $widget.removeData('ac_widget_settings');
-
-            $(this).hide();
-            $(this).siblings('[data-ac-edit]').show();
-            $(this).siblings('[data-ac-save]').hide();
-
+            api.hide_cover();
         },
 
         /**
@@ -647,6 +685,8 @@ var AC_Interface;
 
             var menu_item_i, menu_item, submenu_item_i, submenu_item, trashed, $trashed_widgets,
                 new_menu = [], trashed_widgets = [];
+
+            api.unsaved_changes = false;
 
             // Admin Menu
             for (menu_item_i = 0; menu_item_i < api.active_menu.length; menu_item_i++) {
@@ -731,6 +771,17 @@ var AC_Interface;
         },
 
         /**
+         * Fires before exiting the interface.
+         */
+        exit_interface: function (e) {
+
+            if (api.unsaved_changes && !confirm(data['interfaceL10n']['unsavedChangesExit'])) {
+                e.preventDefault();
+                return false;
+            }
+        },
+
+        /**
          * Reset the interface to default values (deletes the DB option).
          *
          * @since 0.1.0
@@ -766,6 +817,11 @@ var AC_Interface;
          * @since 0.1.0
          */
         change_role: function () {
+
+            if (api.unsaved_changes && !confirm(data['interfaceL10n']['unsavedChangesChangeRole'])) {
+                $(this).val(api.current_role);
+                return;
+            }
 
             window.location.href = window.location.pathname + "?" + $.param({
                     ac_customize: 1,
@@ -830,14 +886,18 @@ var AC_Interface;
          * @param e
          * @param ui
          */
-        show_widget_move_adminnotice:function (e, ui) {
+        show_widget_move_adminnotice: function (e, ui) {
 
             // Don't fire when trashing
             if (ui.item.parent().hasClass('ac-interface-widgets-trash')) {
                 return;
             }
 
-            api.$elements.widget_move_adminnotice.slideDown( 150 );
+            api.$elements.widget_move_adminnotice.slideDown(150).effect('shake');
+            $('html, body').animate({
+                scrollTop: api.$elements.widget_move_adminnotice.offset().top -
+                (api.$elements.toolbar.length ? api.$elements.toolbar.height() : 0)
+            });
         }
     };
 

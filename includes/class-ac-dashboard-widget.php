@@ -168,7 +168,7 @@ class AC_Dashboard_Widget {
 		$this->current_instance = $instance;
 		?>
 		<form class="ac-widget-form">
-			<input type="hidden" name="ac_id" value="<?php echo $this->ID; ?>"/>
+			<input type="hidden" name="ac_id" value="<?php echo $this->ID; ?>" />
 
 			<div class="ac-widget-form-custom">
 				<?php $this->form( $instance ); ?>
@@ -226,8 +226,8 @@ class AC_Dashboard_Widget {
 
 	public function get_field_value( $name ) {
 
-		if ( $this->current_instance && isset( $this->current_instance['args'][ $name ] ) ) {
-			return $this->current_instance['args'][ $name ];
+		if ( $this->current_instance && isset( $this->current_instance[ $name ] ) ) {
+			return $this->current_instance[ $name ];
 		} else {
 			return false;
 		}

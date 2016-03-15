@@ -35,5 +35,4 @@ defined( 'ABSPATH' ) || die();
 			<?php $this->show_ac_widgets(); ?>
 		</div>
 	</div>
-
-	<?php // No closing </div> because the hook we're in (welcome_panel) will add that.
+</div>

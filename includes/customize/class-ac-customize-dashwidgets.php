@@ -23,15 +23,6 @@ defined( 'ABSPATH' ) || die();
 class AC_Customize_DashWidgets {
 
 	/**
-	 * Widgets that have been disabled.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @var array|bool
-	 */
-	public $trashed_widgets = false;
-
-	/**
 	 * Widgets that have been added.
 	 *
 	 * @since 0.1.0
@@ -64,19 +55,21 @@ class AC_Customize_DashWidgets {
 
 		global $wp_meta_boxes;
 
+		$dash_widgets = $this->dash_widgets;
+
 		// If any new widgets are already set, this means they aren't AC widgets and only have the title modified. So
 		// we need to change the title and then unset the new widget.
-		if ( $this->dash_widgets ) {
+		if ( $dash_widgets ) {
 			foreach ( $wp_meta_boxes['dashboard'] as &$priorities ) {
 				foreach ( $priorities as &$widgets ) {
 					foreach ( $widgets as $widget_ID => &$widget ) {
-						if ( isset( $this->dash_widgets[ $widget_ID ] ) ) {
+						if ( isset( $dash_widgets[ $widget_ID ] ) ) {
 
-							if ( isset( $this->dash_widgets[ $widget_ID ]['title'] ) ) {
-								$widget['title'] = $this->dash_widgets[ $widget_ID ]['title'];
+							if ( isset( $dash_widgets[ $widget_ID ]['title'] ) ) {
+								$widget['title'] = $dash_widgets[ $widget_ID ]['title'];
 							}
 
-							unset( $this->dash_widgets[ $widget_ID ] );
+							unset( $dash_widgets[ $widget_ID ] );
 						}
 					}
 				}
@@ -86,12 +79,12 @@ class AC_Customize_DashWidgets {
 		}
 
 		// Now we continue on and add any remaining new widgets.
-		if ( $this->dash_widgets ) {
-			foreach ( $this->dash_widgets as $widget_ID => $widget ) {
+		if ( $dash_widgets ) {
+			foreach ( $dash_widgets as $widget_ID => $widget ) {
 
 				// Make sure this is indeed an AC widget
 				if ( ! isset( $widget['ac_id'] ) ) {
-					unset( $this->dash_widgets[ $widget_ID ] );
+					unset( $dash_widgets[ $widget_ID ] );
 					continue;
 				}
 
@@ -118,12 +111,18 @@ class AC_Customize_DashWidgets {
 
 		global $wp_meta_boxes;
 
-		if ( $this->trashed_widgets ) {
+		if ( $this->dash_widgets ) {
 			foreach ( $wp_meta_boxes['dashboard'] as $context => $priorities ) {
-				foreach ( $priorities as $priority => $widgets ) {
+				foreach ( $priorities as $widgets ) {
 					foreach ( $widgets as $widget_ID => $widget ) {
-						if ( in_array( $widget_ID, $this->trashed_widgets ) ) {
-							remove_meta_box( $widget_ID, 'dashboard', $context );
+						if ( isset( $this->dash_widgets[ $widget_ID ] ) ) {
+
+							// Trashed
+							if ( isset( $this->dash_widgets[ $widget_ID ]['trashed'] ) &&
+							     $this->dash_widgets[ $widget_ID ]['trashed']
+							) {
+								remove_meta_box( $widget_ID, 'dashboard', $context );
+							}
 						}
 					}
 				}

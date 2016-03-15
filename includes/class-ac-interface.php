@@ -97,7 +97,7 @@ class AC_Interface {
 			add_action( 'admin_init', array( $this, 'translations' ) );
 			add_filter( 'admin_body_class', array( $this, 'body_class' ) );
 			add_action( 'adminmenu', array( $this, 'interface_adminmenu_trash_HTML' ) );
-			add_action( 'welcome_panel', array( $this, 'interface_widgets_toolbar_HTML' ), 1000 );
+			add_action( 'admin_footer', array( $this, 'interface_widgets_toolbar_HTML' ), 1000 );
 			add_action( 'admin_footer', array( $this, 'add_edit_HTML' ) );
 			add_action( 'admin_footer', array( $this, 'interface_toolbar_HTML' ) );
 
@@ -129,9 +129,11 @@ class AC_Interface {
 	function translations() {
 
 		AC()->add_script_data( 'interfaceL10n', array(
-			'adminmenuTrashEmpty'   => __( 'Drag items here', 'AC' ),
-			'widgetsTrashPostfixAC' => __( '(pending deletion)', 'AC' ),
-			'widgetsTrashPostfixWP' => __( '(disabled)', 'AC' ),
+			'adminmenuTrashEmpty'      => __( 'Drag items here', 'AC' ),
+			'widgetsTrashPostfixAC'    => __( '(pending deletion)', 'AC' ),
+			'widgetsTrashPostfixWP'    => __( '(disabled)', 'AC' ),
+			'unsavedChangesChangeRole' => __( 'You have unsaved changes. Are you sure you want to edit another role?', 'AC' ),
+			'unsavedChangesExit'       => __( 'You have unsaved changes. Are you sure you want to exit?', 'AC' ),
 		) );
 	}
 
@@ -174,18 +176,10 @@ class AC_Interface {
 	/**
 	 * Outputs the interface widgets toolbar HTML.
 	 *
-	 * This is hooked into 'welcome_panel" because there are no other actions to hook into that allow placing any HTML
-	 * into the dashboard section. By hooking here and closing off the welcome panel, it's possible to unobtrusively
-	 * add some HTML after the welcome panel and above the dashboard widgets.
-	 *
 	 * @since 0.1.0
 	 * @access private
 	 */
 	function interface_widgets_toolbar_HTML() {
-
-		// Close off the welcome panel so we can start a custom <div>
-		echo '</div>';
-
 		include_once __DIR__ . '/views/html-interface-widgets-toolbar.php';
 	}
 
@@ -207,6 +201,9 @@ class AC_Interface {
 	 * @access private
 	 */
 	function setup_data() {
+
+		// Also enqueue jquery ui effects
+		wp_enqueue_script( 'jquery-effects-shake' );
 
 		AC()->add_script_data( 'launch_interface' );
 		AC()->add_script_data( 'current_role', $this->current_role );
@@ -322,10 +319,15 @@ class AC_Interface {
 	 * @access private
 	 */
 	function interface_admin_notices() {
+
+		// TODO Add button to PERMANENTLY hide
 		?>
 		<div id="ac-widgets-move-adminnotice" class="notice notice-warning is-dismissible">
 			<p>
 				<?php _e( '<strong>Notice:</strong> Meta-box positions will not be saved when using the Interface. Meta-box positions are customizable for each user.', 'AC' ); ?>
+			</p>
+			<p>
+				<?php _e( 'If you would like to edit <strong>your</strong> meta-box positions, please exit the interface first.', 'AC' ); ?>
 			</p>
 		</div>
 		<?php
@@ -467,7 +469,8 @@ class AC_Interface {
 
 		global $wp_meta_boxes;
 
-		$dash_widgets = array();
+		$custom_dashwidgets = $this->customize_dashwidgets->dash_widgets;
+		$dash_widgets       = array();
 		if ( isset( $wp_meta_boxes['dashboard'] ) && ! empty( $wp_meta_boxes['dashboard'] ) ) {
 			foreach ( $wp_meta_boxes['dashboard'] as &$priorities ) {
 				foreach ( $priorities as &$widgets ) {
@@ -478,17 +481,11 @@ class AC_Interface {
 							'title',
 						) ) );
 
-						// If is an AC widget, get AC ID and args
-						if ( isset( $this->customize_dashwidgets->dash_widgets[ $widget['id'] ] ) ) {
-
-							$dash_widgets[ $widget['id'] ]['ac_id'] = $this->customize_dashwidgets->dash_widgets[ $widget['id'] ]['ac_id'];
-							$dash_widgets[ $widget['id'] ]['args']  = array_diff_key(
-								$this->customize_dashwidgets->dash_widgets[ $widget['id'] ],
-								array_flip( array(
-									'id',
-									'ac_id',
-									'title'
-								) )
+						// Customized dash widget
+						if ( isset( $custom_dashwidgets[ $widget['id'] ] ) ) {
+							$dash_widgets[ $widget['id'] ] = array_merge(
+								$dash_widgets[ $widget['id'] ],
+								$custom_dashwidgets[ $widget['id'] ]
 							);
 						}
 					}
@@ -547,6 +544,13 @@ class AC_Interface {
 		// Widgets
 		$widgets = ac_string_to_bool( $widgets );
 		$widgets = wp_unslash( $widgets );
+
+		// Remove permanently trashed AC widgets
+		foreach ( $widgets as $widget_ID => $widget ) {
+			if ( isset( $widget['ac_id'] ) && isset( $widget['trashed'] ) && $widget['trashed'] ) {
+				unset( $widgets[ $widget_ID ] );
+			}
+		}
 
 		$old_value = get_option( "ac_customize_$role" );
 		$new_value = array(
@@ -692,8 +696,9 @@ class AC_Interface {
 
 		global $wp_meta_boxes;
 
-		if ( empty( $wp_meta_boxes['dashboard']['ac_new'] ) ) {
-			return 'no widgets';
+		// TODO Better message
+		if ( empty( $wp_meta_boxes['dashboard']['ac_new']['default'] ) ) {
+			_e( 'No Widgets', 'AC' );
 		}
 
 		// Store and unset so they don't get printed out
