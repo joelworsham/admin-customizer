@@ -143,7 +143,9 @@ Interface widgets toolbar.
   cursor: pointer; }
   #dashboard-widgets h2 .ac-interface-widget-edit-button:hover {
     background: #00b9eb; }
-  #dashboard-widgets h2 .ac-interface-widget-edit-button[data-ac-save], #dashboard-widgets h2 .ac-interface-widget-edit-button[data-ac-cancel] {
+  #dashboard-widgets h2 .ac-interface-widget-edit-button.ac-interface-widget-edit-button-cancel {
+    margin-left: 0.5em; }
+  #dashboard-widgets h2 .ac-interface-widget-edit-button.ac-interface-widget-edit-button-save, #dashboard-widgets h2 .ac-interface-widget-edit-button.ac-interface-widget-edit-button-cancel {
     display: none; }
   #dashboard-widgets h2 .ac-interface-widget-edit-button .dashicons {
     font-size: 14px;

@@ -508,16 +508,15 @@ var AC_Interface;
         open_edit_widget: function () {
 
             var $old_widget = $(this).closest('.postbox'),
-                $widget_placeholder = $old_widget.clone(true).removeAttr('id'),
+                $widget_placeholder = $old_widget.clone(true),
                 $title, title,
                 widget_args = api.dash_widgets[$old_widget.attr('id')];
 
             // Hide old widget and paste new widget after
-            $old_widget.hide().after($widget_placeholder);
+            $old_widget.hide().attr('data-id', $old_widget.attr('id')).removeAttr('id').after($widget_placeholder);
 
             // Setup new widget
-            $widget_placeholder.removeClass('closed')
-                .attr('data-id', $old_widget.attr('id'));
+            $widget_placeholder.removeClass('closed');
 
             // Set buttons' visibility
             $widget_placeholder.find('[data-ac-edit]').hide();
@@ -534,7 +533,7 @@ var AC_Interface;
             } else {
                 title = widget_args['title'];
             }
-            $widget_placeholder.find('h2.hndle span').first().html('<input type="text" value="' + title + '" />');
+            $widget_placeholder.find('h2.hndle span').first().html('<input type="text" class="ac-widget-title-input" value="' + title + '" />');
 
             // If AC widget, get the form and output it
             if (widget_args['ac_id']) {
@@ -565,6 +564,9 @@ var AC_Interface;
                 );
             } else {
 
+                // Hide inside
+                $widget_placeholder.find('.inside').slideUp();
+
                 begin_editing_widget();
             }
 
@@ -592,9 +594,9 @@ var AC_Interface;
         save_edit_widget: function () {
 
             var $widget_placeholder = $(this).closest('.postbox'),
-                $widget = $('#' + $widget_placeholder.attr('data-id')),
+                $widget = $('[data-id="' + $widget_placeholder.attr('id') + '"]'),
                 $form = $widget_placeholder.find('.ac-widget-form'),
-                widget_args = api.dash_widgets[$widget.attr('id')];
+                widget_args = api.dash_widgets[$widget_placeholder.attr('id')];
 
             api.unsaved_changes = true;
 
@@ -652,7 +654,7 @@ var AC_Interface;
             }
 
             // Show widget and get rid of placeholder
-            $widget.removeClass('closed').show();
+            $widget.attr('id', $widget.attr('data-id')).removeAttr('data-id').removeClass('closed').show();
             $widget_placeholder.remove();
 
             $(this).hide();
@@ -668,9 +670,9 @@ var AC_Interface;
         cancel_edit_widget: function () {
 
             var $widget_placeholder = $(this).closest('.postbox'),
-                $widget = $('#' + $widget_placeholder.attr('data-id'));
+                $widget = $('[data-id="' + $widget_placeholder.attr('id') + '"]');
 
-            $widget.removeClass('closed').show();
+            $widget.attr('id', $widget.attr('data-id')).removeAttr('data-id').removeClass('closed').show();
             $widget_placeholder.remove();
 
             api.hide_cover();

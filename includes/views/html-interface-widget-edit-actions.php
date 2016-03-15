@@ -12,15 +12,15 @@ defined( 'ABSPATH' ) || die();
 ?>
 
 <span id="ac-interface-widget-edit-actions">
-	<span class="ac-interface-widget-edit-button" data-ac-edit>
+	<span class="ac-interface-widget-edit-button ac-interface-widget-edit-button-edit" data-ac-edit>
 		<span class="dashicons dashicons-edit"></span>
 	</span>
 
-	<span class="ac-interface-widget-edit-button" data-ac-cancel>
+	<span class="ac-interface-widget-edit-button ac-interface-widget-edit-button-cancel" data-ac-cancel>
 		<span class=" dashicons dashicons-no"></span>
 	</span>
 
-	<span class="ac-interface-widget-edit-button" data-ac-save>
+	<span class="ac-interface-widget-edit-button ac-interface-widget-edit-button-save" data-ac-save>
 		<span class="dashicons dashicons-yes"></span>
 	</span>
 </span>

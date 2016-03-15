@@ -20,7 +20,11 @@ Interface widgets toolbar.
         background: #00b9eb;
       }
 
-      &[data-ac-save], &[data-ac-cancel] {
+      &.ac-interface-widget-edit-button-cancel {
+        margin-left: 0.5em;
+      }
+
+      &.ac-interface-widget-edit-button-save, &.ac-interface-widget-edit-button-cancel {
         display: none;
       }
 
