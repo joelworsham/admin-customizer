@@ -30,3 +30,5 @@ defined( 'ABSPATH' ) || die();
 		</select>
 	<?php endif; ?>
 </div>
+
+<div id="ac-interface-cover"><span class="spinner"></span></div>

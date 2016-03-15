@@ -13,8 +13,8 @@
 
 defined( 'ABSPATH' ) || die();
 ?>
-<div id="ac-widget-<?php echo "$widget[id]-$widget_object->instance;"; ?>"
-     class="ac-interface-widget postbox closed" data-instance="<?php echo $widget_object->instance; ?>">
+<div id="<?php echo $widget['id']; ?>"
+     class="ac-interface-widget postbox closed">
 
 	<button type="button" class="handlediv button-link" aria-expanded="true">
 		<span class="screen-reader-text">

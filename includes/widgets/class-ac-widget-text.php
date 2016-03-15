@@ -50,10 +50,19 @@ class AC_Widget_Text extends AC_Dashboard_Widget {
 	 * Outputs the widget form.
 	 *
 	 * @since 0.1.0
+	 *
+	 * @param array $instance The current widget instance.
 	 */
-	public function form() {
+	public function form( $instance ) {
 		?>
-		<textarea name="text"></textarea>
+		<label for="<?php echo $this->get_field_id( 'text' ); ?>">
+			<?php _e( 'Text / HTML', 'AC' ); ?>
+		</label>
+
+		<br/>
+
+		<textarea id="<?php echo $this->get_field_id( 'text' ); ?>" name="text"
+		><?php echo $this->get_field_value( 'text' ); ?></textarea>
 		<?php
 	}
 }

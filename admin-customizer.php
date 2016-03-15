@@ -122,6 +122,7 @@ if ( ! class_exists( 'AC' ) ) {
 			require_once ADMINCUSTOMIZER_DIR . '/includes/class-ac-dashboard-widget.php';
 			require_once ADMINCUSTOMIZER_DIR . '/includes/widgets/class-ac-widget-text.php';
 			require_once ADMINCUSTOMIZER_DIR . '/includes/customize/class-ac-customize-adminmenu.php';
+			require_once ADMINCUSTOMIZER_DIR . '/includes/customize/class-ac-customize-dashwidgets.php';
 		}
 
 		/**

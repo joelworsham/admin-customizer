@@ -37,6 +37,15 @@ var AC_Interface;
         active_menu: false,
 
         /**
+         * Widgets on the dashboard.
+         *
+         * @since 0.1.0
+         *
+         * @var Array
+         */
+        dash_widgets: [],
+
+        /**
          * The currently being modified role.
          *
          * @since 0.1.0
@@ -44,6 +53,15 @@ var AC_Interface;
          * @var string|null
          */
         current_role: null,
+
+        /**
+         * Counts down for minimum cover display.
+         *
+         * @since 0.1.0
+         *
+         * @var int
+         */
+        cover_timer: 0,
 
         /**
          * Initializes the interface.
@@ -70,7 +88,9 @@ var AC_Interface;
             api.$elements.widgets_trash = api.$elements.widgets_toolbar.find('.ac-interface-widgets-trash');
             api.$elements.widgets_new = api.$elements.widgets_toolbar.find('.ac-interface-widgets-new');
             api.$elements.dashwidgets = $('#dashboard-widgets').find('.meta-box-sortables');
+            api.$elements.widget_move_adminnotice = $('#ac-widgets-move-adminnotice');
             api.$elements.toolbar = $('#ac-interface-toolbar');
+            api.$elements.cover = $('#ac-interface-cover');
             api.$elements.save = api.$elements.toolbar.find('[data-ac-interface-save]');
             api.$elements.reset = api.$elements.toolbar.find('[data-ac-interface-reset]');
             api.$elements.select_role = api.$elements.toolbar.find('[data-ac-interface-select-role]');
@@ -86,6 +106,14 @@ var AC_Interface;
             api.$elements.save.click(api.save_interface);
             api.$elements.reset.click(api.reset_interface);
             api.$elements.select_role.change(api.change_role);
+
+            api.$elements.dashwidgets.on('click', '[data-ac-edit]', api.open_edit_widget);
+            api.$elements.dashwidgets.on('click', '[data-ac-cancel]', api.cancel_edit_widget);
+            api.$elements.dashwidgets.on('click', '[data-ac-save]', api.save_edit_widget);
+            api.$elements.dashwidgets.on('click', 'h2.hndle input[type="text"]', function (e) {
+                $(this).closest('.postbox').removeClass('closed');
+            });
+            api.$elements.dashwidgets.on('sortstop', api.show_widget_move_adminnotice);
         },
 
         /**
@@ -95,7 +123,14 @@ var AC_Interface;
          */
         launch_interface: function () {
 
+            var trashed_widgets, $trashed_widget, i;
+
             api.current_role = data['current_role'];
+
+            // Disable saving of metabox ordering and hidden/closed status
+            $('#closedpostboxesnonce').val('disabled')
+                .before('<!-- Disabled by Admin Customizer Sandbox for the Interface page. @see assets/src/js/interface.js api.launch_interface() for more information. -->');
+            $('#meta-box-order-nonce').val('disabled');
 
             // ADMIN MENU
 
@@ -200,6 +235,26 @@ var AC_Interface;
             }
 
             // WIDGETS
+            api.dash_widgets = data['dash_widgets'];
+
+            // Add edit HTML to each title
+            api.$elements.dashwidgets.find('h2.hndle').append($('#ac-interface-widget-edit-actions').html());
+
+            // Move to trash
+            trashed_widgets = data['trashed_widgets'];
+            if (trashed_widgets) {
+                for (i = 0; i < trashed_widgets.length; i++) {
+
+                    $trashed_widget = $('#' + trashed_widgets[i]);
+                    if ($trashed_widget.length) {
+                        $trashed_widget.addClass('closed')
+                            .appendTo(api.$elements.widgets_trash)
+                            .find('h2.hndle')
+                            .append('<span class="ac-interface-widget-trashed-postfix"> '
+                                + data['interfaceL10n']['widgetsTrashPostfixWP'] + '</span>');
+                    }
+                }
+            }
 
             // Trash sortable
             api.$elements.widgets_trash.sortable({
@@ -233,7 +288,7 @@ var AC_Interface;
             api.$elements.widgets_new.sortable({
                 connectWith: '.meta-box-sortables',
                 placeholder: 'sortable-placeholder',
-                remove: add_new_widget
+                stop: add_new_widget
             });
 
             // Prevent collapsing widget inside when clicking "Title" input
@@ -248,7 +303,13 @@ var AC_Interface;
              */
             function widgets_trash_receive(e, ui) {
 
+                var message = ui.item.attr('id').indexOf('ac-widget-') !== -1 ?
+                    data['interfaceL10n']['widgetsTrashPostfixAC'] :
+                    data['interfaceL10n']['widgetsTrashPostfixWP'];
+
                 ui.item.addClass('closed');
+
+                ui.item.find('h2.hndle').append('<span class="ac-interface-widget-trashed-postfix"> ' + message + '</span>');
 
                 api.$elements.widgets_trash.removeClass('empty');
 
@@ -266,6 +327,8 @@ var AC_Interface;
             function widgets_trash_remove(e, ui) {
 
                 ui.item.removeClass('closed');
+
+                ui.item.find('.ac-interface-widget-trashed-postfix').remove();
 
                 if (!api.$elements.widgets_trash.find('> .postbox').length) {
                     api.$elements.widgets_trash.addClass('empty');
@@ -310,68 +373,269 @@ var AC_Interface;
             function add_new_widget(e, ui) {
 
                 var $widget = ui.item,
-                    $receiver = ui.item.closest('.ui-sortable'),
                     $form = $widget.find('.ac-widget-form'),
-                    new_index = $widget.index(),
-                    args = {};
+                    widget_args = {},
+                    widget_index, widget_ID, $new_widget;
 
                 // TODO Handle checkboxes/radios
                 if ($form.length) {
                     $.each($form.serializeArray(), function (i, object) {
-                        args[object.name] = object.value;
+                        widget_args[object.name] = object.value;
                     });
                 }
 
-                args.title = $widget.find('[name="ac_widget_title"]').val();
+                widget_args['title'] = $widget.find('[name="ac_widget_title"]').val();
+                if (!widget_args['title']) {
+                    widget_args['title'] = $widget.find('.ac-widget-title-text').html();
+                }
 
-                e.preventDefault();
+                api.reveal_cover();
 
+                // Reset widget form
+                $form.find('input:text, input:password, input:file, select, textarea').val('');
+                $form.find('input:radio, input:checkbox')
+                    .removeAttr('checked').removeAttr('selected');
+                $widget.find('[name="ac_widget_title"]').val('');
+                $widget.addClass('closed');
+
+                // Place a clone back into the original list
+                $new_widget = $widget.clone(true);
+                api.$elements.widgets_new.append($new_widget);
+                api.$elements.widgets_new.sortable('refresh');
+
+                // Prepare the widget in the new list
+                // Get widget index
+                widget_index = api.$elements.dashwidgets.find('[id^="' + $widget.attr('id') + '"]').length - 1;
+
+                $widget.find('.inside').html('');
+                $widget.find('.ac-widget-title-text').html(widget_args['title'] ? widget_args['title'] : widget_args['widget_name']);
+                $widget.find('.ac-widget-title-input').remove();
+                $widget.find('h2.hndle').append($('#ac-interface-widget-edit-actions').html());
+                $widget.removeClass('closed');
+                $widget.attr('id', widget_ID = $widget.attr('id') + '_' + widget_index);
+
+                widget_args['id'] = widget_ID;
+
+                // Add to api option
+                api.dash_widgets[widget_ID] = widget_args;
+
+                // Fire method for receiver sortable as to trigger metabox order saving
+                // @see wp-admin/js/postbox.js postboxes.save_order()
+                postboxes.save_order('dashboard');
+
+                // Get the widget output HTML and paste it in the new widget
                 $.post(
                     ajaxurl,
                     {
-                        action: 'ac-add-widget',
-                        widget: args,
+                        action: 'ac-get-widget-html',
+                        widget: widget_args,
+                        output: 'widget',
                         ac_nonce: data.nonce
                     },
                     function (response) {
 
-                        var $item_at_index,
-                            $new_widget = $widget.clone(true);
+                        switch (response['status']) {
+                            case 'success':
+                                $widget.find('.inside').html(response['output']);
+                                break;
 
-                        if (response['status'] == 'success') {
+                            case 'fail':
+                                alert( response['error_msg']);
+                                break;
 
-                            // Reset widget form
-                            $widget.find('.ac-widget-form-custom').html(response['form']);
-                            $widget.find('[name="ac_widget_title"]').val('');
-                            $widget.addClass('closed');
-
-                            // Prepare new widget
-                            $new_widget.find('.ac-widget-inside').html(response['output']);
-                            $new_widget.find('.ac-widget-title-text').html(args.title ? args.title : args.widget_name);
-                            $new_widget.find('.ac-widget-form').remove();
-                            $new_widget.find('.ac-widget-title-input').remove();
-                            $new_widget.removeClass('closed');
-
-                            // Place new widget into dash widgets
-                            $item_at_index = $receiver.find('> div.postbox:eq(' + new_index + ')');
-                            if ($item_at_index.length) {
-                                $item_at_index.before($new_widget);
-                            } else {
-                                $receiver.append($new_widget);
-                            }
-
-                        } else if (response['status'] == 'fail') {
-
-                            if (response['error_msg']) {
-                                alert(response['error_msg']);
-                            }
-
-                        } else {
-                            alert('Could not complete for unknown reasons');
+                            default:
+                                alert( 'Could not complete for unknown reasons.');
                         }
+
+                        api.hide_cover();
                     }
                 );
             }
+        },
+
+        /**
+         * Sets up a widget for editing.
+         *
+         * @since 0.1.0
+         */
+        open_edit_widget: function () {
+
+            var $old_widget = $(this).closest('.postbox'),
+                $widget_placeholder = $old_widget.clone(true).removeAttr('id'),
+                $title, title,
+                widget_args = api.dash_widgets[$old_widget.attr('id')];
+
+            // Hide old widget and paste new widget after
+            $old_widget.hide().after($widget_placeholder);
+
+            // Setup new widget
+            $widget_placeholder.removeClass('closed')
+                .attr('data-id', $old_widget.attr('id'));
+
+            // Set buttons' visibility
+            $widget_placeholder.find('[data-ac-edit]').hide();
+            $widget_placeholder.find('[data-ac-save], [data-ac-cancel]').show();
+
+            api.reveal_cover();
+
+            // Title field. We have to use this method to grab the text form the 'hide-if-no-js' element, if it exists.
+            $title = $('<div>' + widget_args['title'] + '</div>');
+            if ($title.find('.hide-if-no-js').length) {
+
+                title = $title.find('.hide-if-no-js').html();
+                widget_args['no-js-title'] = $title.find('.hide-if-js').html();
+            } else {
+                title = widget_args['title'];
+            }
+            $widget_placeholder.find('h2.hndle span').first().html('<input type="text" value="' + title + '" />');
+
+            // If AC widget, get the form and output it
+            if (widget_args['ac_id']) {
+                $.post(
+                    ajaxurl,
+                    {
+                        action: 'ac-get-widget-html',
+                        widget: widget_args,
+                        output: 'form',
+                        ac_nonce: data['nonce']
+                    },
+                    function (response) {
+                        switch (response['status']) {
+                            case 'success':
+                                $widget_placeholder.find('.inside').html(response['output']);
+                                break;
+
+                            case 'fail':
+                                alert( response['error_msg']);
+                                break;
+
+                            default:
+                                alert( 'Could not complete for unknown reasons.');
+                        }
+
+                        begin_editing_widget();
+                    }
+                );
+            } else {
+
+                begin_editing_widget();
+            }
+
+            function begin_editing_widget() {
+
+                // Hide spinner from cover
+                api.$elements.cover.addClass('ac-widget-editing');
+
+                // Make placeholder visible to edit
+                $widget_placeholder.addClass('ac-widget-placeholder');
+
+                // Make sure placeholder is scrolled into view
+                $('html, body').animate({
+                    scrollTop: $widget_placeholder.offset().top
+                });
+            }
+        },
+
+        /**
+         * Saves a widget's settings after editing.
+         *
+         * @since 0.1.0
+         */
+        save_edit_widget: function () {
+
+            var $widget_placeholder = $(this).closest('.postbox'),
+                $widget = $('#' + $widget_placeholder.attr('data-id')),
+                $form = $widget_placeholder.find('.ac-widget-form'),
+                widget_args = api.dash_widgets[$widget.attr('id')];
+
+            // Title
+            widget_args['title'] = $widget_placeholder.find('h2.hndle input[type="text"]').val();
+
+            // Account for no js title
+            if (widget_args['no-js-title']) {
+                widget_args['title'] = '<span class="hide-if-no-js">' + widget_args['title'] + '</span>' +
+                    '<span class="hide-if-js">' + widget_args['no-js-title'] + '</span>';
+            }
+
+            if ($form.length) {
+                $.each($form.serializeArray(), function (i, object) {
+                    widget_args[object.name] = object.value;
+                });
+            }
+
+            api.$elements.cover.removeClass('ac-widget-editing');
+            api.reveal_cover();
+
+            // Title
+            $widget.find('h2.hndle span').first().html(widget_args['title']);
+
+            // If AC widget, use the form values to output the widget inside
+            if (widget_args['ac_id']) {
+
+                $.post(
+                    ajaxurl,
+                    {
+                        action: 'ac-get-widget-html',
+                        widget: widget_args,
+                        output: 'widget',
+                        ac_nonce: data['nonce']
+                    },
+                    function (response) {
+                        switch (response['status']) {
+                            case 'success':
+                                $widget.find('.inside').html(response['output']);
+                                break;
+
+                            case 'fail':
+                                alert( response['error_msg']);
+                                break;
+
+                            default:
+                                alert( 'Could not complete for unknown reasons.');
+                        }
+
+                        api.hide_cover();
+                    }
+                );
+            } else {
+                api.hide_cover();
+            }
+
+            // Show widget and get rid of placeholder
+            $widget.removeClass('closed').show();
+            $widget_placeholder.remove();
+
+            $(this).hide();
+            $(this).siblings('[data-ac-edit]').show();
+            $(this).siblings('[data-ac-cancel]').hide();
+        },
+
+        /**
+         * Cancels a widget's settings from editing.
+         *
+         * @since 0.1.0
+         */
+        cancel_edit_widget: function () {
+
+            var $widget = $(this).closest('.postbox'),
+                widget_settings = $widget.data('ac_widget_settings');
+
+            // Force open
+            $(this).closest('.postbox').removeClass('closed');
+
+            // Reset settings
+            $widget.find('h2.hndle span').first().html(widget_settings['title']);
+
+            if (widget_settings['inside_HTML']) {
+                $widget.find('.inside').replaceWith(widget_settings['inside_HTML']);
+            }
+
+            $widget.removeData('ac_widget_settings');
+
+            $(this).hide();
+            $(this).siblings('[data-ac-edit]').show();
+            $(this).siblings('[data-ac-save]').hide();
+
         },
 
         /**
@@ -381,11 +645,10 @@ var AC_Interface;
          */
         save_interface: function () {
 
-            var menu_item_i, menu_item, submenu_item_i, submenu_item, trashed,
-                new_menu = [];
+            var menu_item_i, menu_item, submenu_item_i, submenu_item, trashed, $trashed_widgets,
+                new_menu = [], trashed_widgets = [];
 
-            // TODO Submenu
-
+            // Admin Menu
             for (menu_item_i = 0; menu_item_i < api.active_menu.length; menu_item_i++) {
 
                 menu_item = {
@@ -429,12 +692,27 @@ var AC_Interface;
                 new_menu.push(menu_item);
             }
 
+            // Dash Widgets
+            // Trashed
+            $trashed_widgets = api.$elements.widgets_trash.find('.postbox');
+            if ($trashed_widgets.length) {
+                $trashed_widgets.each(function () {
+
+                    var widget_args = api.dash_widgets[$(this).attr('id')];
+
+                    if (widget_args) {
+                        widget_args['trashed'] = true;
+                    }
+                });
+            }
+
             $.post(
                 ajaxurl,
                 {
                     action: 'ac-save-interface',
                     role: api.current_role,
                     menu: new_menu,
+                    widgets: api.dash_widgets,
                     ac_nonce: data.nonce
                 },
                 function (response) {
@@ -504,6 +782,62 @@ var AC_Interface;
 
             e.preventDefault();
             return false;
+        },
+
+        /**
+         * Reveals the screen cover.
+         *
+         * @since 0.1.0
+         *
+         * @param min_time (int) Minimum time cover should show for in 0.1/sec
+         */
+        reveal_cover: function (min_time) {
+
+            min_time = typeof min_time !== 'undefined' ? min_time : 5;
+            api.cover_timer = min_time;
+            countdown();
+
+            api.$elements.cover.addClass('show');
+
+            function countdown() {
+
+                if (api.cover_timer > 0) {
+                    api.cover_timer--;
+                    setTimeout(countdown, 100);
+                }
+            }
+        },
+
+        /**
+         * Hides the screen cover.
+         *
+         * @since 0.1.0
+         */
+        hide_cover: function () {
+
+            if (api.cover_timer === 0) {
+                api.$elements.cover.removeClass('show');
+            } else {
+                setTimeout(api.hide_cover, 100);
+            }
+        },
+
+        /**
+         * Shows the admin notice when trying to move dash widgets.
+         *
+         * @since 0.1.0
+         *
+         * @param e
+         * @param ui
+         */
+        show_widget_move_adminnotice:function (e, ui) {
+
+            // Don't fire when trashing
+            if (ui.item.parent().hasClass('ac-interface-widgets-trash')) {
+                return;
+            }
+
+            api.$elements.widget_move_adminnotice.slideDown( 150 );
         }
     };
 

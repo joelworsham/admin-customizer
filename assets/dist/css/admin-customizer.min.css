@@ -19,6 +19,34 @@ Styles the interface.
   color: #fff;
   z-index: 100; }
 
+#ac-interface-cover {
+  position: fixed;
+  visibility: hidden;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #fff;
+  opacity: 0;
+  z-index: 100000;
+  -webkit-transition: opacity 300ms, visibility 300ms;
+          transition: opacity 300ms, visibility 300ms; }
+  #ac-interface-cover.show {
+    visibility: visible;
+    opacity: 0.8; }
+  #ac-interface-cover.ac-widget-editing .spinner {
+    display: none; }
+  #ac-interface-cover .spinner {
+    position: absolute;
+    visibility: visible;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    z-index: 1001; }
+
 /*
 Interface admin menu styles.
 
@@ -104,12 +132,32 @@ Interface widgets toolbar.
 
 @since 0.1.0
 */
+#dashboard-widgets h2 .ac-interface-widget-edit-button {
+  float: right;
+  text-decoration: none;
+  border-radius: 50%;
+  background: #0073aa;
+  color: #fff;
+  font-size: 11px;
+  padding: 3px;
+  cursor: pointer; }
+  #dashboard-widgets h2 .ac-interface-widget-edit-button:hover {
+    background: #00b9eb; }
+  #dashboard-widgets h2 .ac-interface-widget-edit-button[data-ac-save], #dashboard-widgets h2 .ac-interface-widget-edit-button[data-ac-cancel] {
+    display: none; }
+  #dashboard-widgets h2 .ac-interface-widget-edit-button .dashicons {
+    font-size: 14px;
+    width: auto;
+    height: auto; }
+
 #ac-interface-widgets-toolbar {
-  margin-bottom: 30px; }
+  margin: 0 -8px 20px; }
   #ac-interface-widgets-toolbar:after {
     content: ' ';
     display: table;
     clear: both; }
+  #ac-interface-widgets-toolbar .ac-interface-widget-edit-button {
+    display: none; }
   #ac-interface-widgets-toolbar .ac-interface-widgets-title {
     color: #aaa;
     font-style: italic;
@@ -120,10 +168,14 @@ Interface widgets toolbar.
       line-height: 20px; }
   #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container {
     float: left;
-    width: 50%; }
+    width: 49.5%; }
+    @media screen and (max-width: 782px) {
+      #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container {
+        float: none;
+        width: auto;
+        margin-bottom: 20px; } }
     #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash {
-      min-height: 100px;
-      box-sizing: border-box; }
+      margin: 0 8px; }
       #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash:after {
         content: attr(data-emptystring);
         margin: auto;
@@ -140,16 +192,35 @@ Interface widgets toolbar.
         display: none; }
       #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash.empty {
         position: relative;
-        border: 3px dashed #b4b9be; }
+        border: 3px dashed #b4b9be;
+        min-height: 100px; }
         #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash.empty:after {
           display: block; }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash .postbox {
+        background: #F5F5F5; }
+        #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash .postbox h2 {
+          color: #aaa; }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash .handlediv {
+        display: none; }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .ac-interface-widgets-trash .ac-interface-widget-trashed-postfix {
+        float: right;
+        font-style: italic; }
     #ac-interface-widgets-toolbar .ac-interface-widgets-trash-container .postbox {
       margin-bottom: 0 !important; }
   #ac-interface-widgets-toolbar .ac-interface-widgets-add-new {
     float: right;
-    width: 50%;
-    min-height: 100px;
-    box-sizing: border-box; }
+    width: 49.5%; }
+    @media screen and (max-width: 782px) {
+      #ac-interface-widgets-toolbar .ac-interface-widgets-add-new {
+        float: none;
+        width: auto; } }
+    #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-interface-widgets-new {
+      margin-right: 8px; }
+      @media screen and (max-width: 782px) {
+        #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-interface-widgets-new {
+          margin-left: 8px; } }
+      #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-interface-widgets-new.empty {
+        min-height: 100px; }
     #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .handlediv {
       position: absolute;
       right: 0; }
@@ -165,4 +236,11 @@ Interface widgets toolbar.
         width: 100%; }
     #ac-interface-widgets-toolbar .ac-interface-widgets-add-new .ac-widget-inside {
       display: none; }
+
+.ac-widget-placeholder {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 100001; }
+
+#ac-widgets-move-adminnotice {
+  display: none; }
 /*# sourceMappingURL=admin-customizer.min.css.map */

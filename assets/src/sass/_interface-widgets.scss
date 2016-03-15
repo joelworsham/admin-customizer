@@ -4,13 +4,46 @@ Interface widgets toolbar.
 @since 0.1.0
 */
 
+#dashboard-widgets {
+  h2 {
+    .ac-interface-widget-edit-button {
+      float: right;
+      text-decoration: none;
+      border-radius: 50%;
+      background: #0073aa;
+      color: #fff;
+      font-size: 11px;
+      padding: 3px;
+      cursor: pointer;
+
+      &:hover {
+        background: #00b9eb;
+      }
+
+      &[data-ac-save], &[data-ac-cancel] {
+        display: none;
+      }
+
+      .dashicons {
+        font-size: 14px;
+        width: auto;
+        height: auto;
+      }
+    }
+  }
+}
+
 #ac-interface-widgets-toolbar {
-  margin-bottom: 30px;
+  margin: 0 -8px 20px;
 
   &:after {
     content: ' ';
     display: table;
     clear: both;
+  }
+
+  .ac-interface-widget-edit-button {
+    display: none;
   }
 
   .ac-interface-widgets-title {
@@ -27,11 +60,16 @@ Interface widgets toolbar.
 
   .ac-interface-widgets-trash-container {
     float: left;
-    width: 50%;
+    width: 49.5%;
+
+    @media screen and (max-width: 782px) {
+      float: none;
+      width: auto;
+      margin-bottom: 20px;
+    }
 
     .ac-interface-widgets-trash {
-      min-height: 100px;
-      box-sizing: border-box;
+      margin: 0 8px;
 
       &:after {
         content: attr(data-emptystring);
@@ -52,10 +90,28 @@ Interface widgets toolbar.
       &.empty {
         position: relative;
         border: 3px dashed #b4b9be;
+        min-height: 100px;
 
         &:after {
           display: block;
         }
+      }
+
+      .postbox {
+        background: #F5F5F5;
+
+        h2 {
+          color: #aaa;
+        }
+      }
+
+      .handlediv {
+        display: none;
+      }
+
+      .ac-interface-widget-trashed-postfix {
+        float: right;
+        font-style: italic;
       }
     }
 
@@ -66,9 +122,24 @@ Interface widgets toolbar.
 
   .ac-interface-widgets-add-new {
     float: right;
-    width: 50%;
-    min-height: 100px;
-    box-sizing: border-box;
+    width: 49.5%;
+
+    @media screen and (max-width: 782px) {
+      float: none;
+      width: auto;
+    }
+
+    .ac-interface-widgets-new {
+      margin-right: 8px;
+
+      @media screen and (max-width: 782px) {
+        margin-left: 8px;
+      }
+
+      &.empty {
+        min-height: 100px;
+      }
+    }
 
     .handlediv {
       position: absolute;
@@ -95,4 +166,13 @@ Interface widgets toolbar.
       display: none;
     }
   }
+}
+
+.ac-widget-placeholder {
+  box-shadow: 0 0 10px rgba(#000, 0.1);
+  z-index: 100001; // Sit over cover
+}
+
+#ac-widgets-move-adminnotice {
+  display: none;
 }

@@ -32,6 +32,15 @@ class AC_Interface {
 	private $customize_adminmenu;
 
 	/**
+	 * The Customize Dash Widgets module.
+	 *
+	 * @since 0.1.0
+	 *
+	 * @var AC_Customize_DashWidgets
+	 */
+	private $customize_dashwidgets;
+
+	/**
 	 * The currently being modified role.
 	 *
 	 * @since 0.1.0
@@ -65,28 +74,35 @@ class AC_Interface {
 	 */
 	function __construct() {
 
-		$this->customize_adminmenu = new AC_Customize_AdminMenu();
+		$this->customize_adminmenu   = new AC_Customize_AdminMenu();
+		$this->customize_dashwidgets = new AC_Customize_DashWidgets();
+
 		$this->default_widgets();
 
 		add_action( 'init', array( $this, 'setup_role' ), 1 );
 		add_action( 'init', array( $this, 'get_customizations' ) );
 		add_action( 'wp_ajax_ac-save-interface', array( $this, 'ajax_save_interface' ) );
 		add_action( 'wp_ajax_ac-reset-interface', array( $this, 'ajax_reset_interface' ) );
-		add_action( 'wp_ajax_ac-add-widget', array( $this, 'ajax_add_widget' ) );
+		add_action( 'wp_ajax_ac-get-widget-html', array( $this, 'ajax_get_widget_HTML' ) );
 
 		if ( isset( $_REQUEST['ac_customize'] ) ) {
 
+			add_action( 'admin_notices', array( $this, 'interface_admin_notices' ) );
+			add_action( 'admin_head', array( $this, 'manage_help_tabs' ) );
+			add_filter( 'screen_options_show_screen', '__return_false' );
 			add_action( 'admin_init', array( $this, 'get_adminmenu' ) );
 			add_action( 'admin_init', array( $this, 'sync_custom_menu' ), 50 );
-			add_action( 'admin_init', array( $this, 'setup_data' ), 100 );
+			add_action( 'wp_dashboard_setup', array( $this, 'get_dash_widgets' ), 998 ); // Before interface widgets
+			add_action( 'admin_enqueue_scripts', array( $this, 'setup_data' ), 9 ); // Right before they're enqueued
 			add_action( 'admin_init', array( $this, 'translations' ) );
 			add_filter( 'admin_body_class', array( $this, 'body_class' ) );
 			add_action( 'adminmenu', array( $this, 'interface_adminmenu_trash_HTML' ) );
 			add_action( 'welcome_panel', array( $this, 'interface_widgets_toolbar_HTML' ), 1000 );
+			add_action( 'admin_footer', array( $this, 'add_edit_HTML' ) );
 			add_action( 'admin_footer', array( $this, 'interface_toolbar_HTML' ) );
 
 			if ( isset( $_REQUEST['ac_current_role'] ) ) {
-				add_action( 'user_has_cap', array( $this, 'modify_role_capabilities' ), 10, 4 );
+				add_filter( 'user_has_cap', array( $this, 'modify_role_capabilities' ), 10, 4 );
 			}
 		} else {
 
@@ -113,7 +129,9 @@ class AC_Interface {
 	function translations() {
 
 		AC()->add_script_data( 'interfaceL10n', array(
-			'adminmenuTrashEmpty' => __( 'Drag items here', 'AC' ),
+			'adminmenuTrashEmpty'   => __( 'Drag items here', 'AC' ),
+			'widgetsTrashPostfixAC' => __( '(pending deletion)', 'AC' ),
+			'widgetsTrashPostfixWP' => __( '(disabled)', 'AC' ),
 		) );
 	}
 
@@ -130,6 +148,16 @@ class AC_Interface {
 		$current_user_role = $this->current_role;
 
 		include_once __DIR__ . '/views/html-interface-toolbar.php';
+	}
+
+	/**
+	 * Outputs the interface widget edit buttons.
+	 *
+	 * @since 0.1.0
+	 */
+	function add_edit_HTML() {
+
+		include_once __DIR__ . '/views/html-interface-widget-edit-actions.php';
 	}
 
 	/**
@@ -189,6 +217,8 @@ class AC_Interface {
 		} else {
 			AC()->add_script_data( 'current_menu', $this->customize_adminmenu->current_menu );
 		}
+
+		AC()->add_script_data( 'dash_widgets', $this->customize_dashwidgets->dash_widgets );
 	}
 
 	/**
@@ -257,11 +287,16 @@ class AC_Interface {
 	function get_customizations() {
 
 		$menu_customizations = false;
+		$dash_widgets        = array();
 
 		if ( $customizations = get_option( "ac_customize_$this->current_role" ) ) {
 
 			if ( isset( $customizations['menu'] ) && ! empty( $customizations['menu'] ) ) {
 				$menu_customizations = $customizations['menu'];
+			}
+
+			if ( isset( $customizations['widgets'] ) && ! empty( $customizations['widgets'] ) ) {
+				$dash_widgets = $customizations['widgets'];
 			}
 		}
 
@@ -271,6 +306,57 @@ class AC_Interface {
 		 * @since 0.1.0
 		 */
 		$this->customize_adminmenu->custom_menu = apply_filters( 'ac_custom_menu', $menu_customizations );
+
+		/**
+		 * Allows filtering the new widgets.
+		 *
+		 * @since 0.1.0
+		 */
+		$this->customize_dashwidgets->dash_widgets = apply_filters( 'ac_dash_widgets', $dash_widgets );
+	}
+
+	/**
+	 * Adds admin notices for the Interface.
+	 *
+	 * @since 0.1.0
+	 * @access private
+	 */
+	function interface_admin_notices() {
+		?>
+		<div id="ac-widgets-move-adminnotice" class="notice notice-warning is-dismissible">
+			<p>
+				<?php _e( '<strong>Notice:</strong> Meta-box positions will not be saved when using the Interface. Meta-box positions are customizable for each user.', 'AC' ); ?>
+			</p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Removes the default help tabs and populates it with Interface instructions.
+	 *
+	 * @since 0.1.0
+	 * @access private
+	 */
+	function manage_help_tabs() {
+
+		$screen = get_current_screen();
+
+		// Remove default tabs
+		$screen->remove_help_tab( 'overview' );
+		$screen->remove_help_tab( 'help-navigation' );
+		$screen->remove_help_tab( 'help-layout' );
+		$screen->remove_help_tab( 'help-content' );
+
+		// Remove sidebar
+		$screen->set_help_sidebar( false );
+
+		// Add new tabs
+		// TODO Help Tabs
+		$screen->add_help_tab( array(
+			'id'      => 'ac-help-adminmenu',
+			'title'   => __( 'Admin Menu' ),
+			'content' => 'Test',
+		) );
 	}
 
 	/**
@@ -372,6 +458,49 @@ class AC_Interface {
 	}
 
 	/**
+	 * Gets dashboard widgets for use in the interface.
+	 *
+	 * @since 0.1.0
+	 * @access private
+	 */
+	function get_dash_widgets() {
+
+		global $wp_meta_boxes;
+
+		$dash_widgets = array();
+		if ( isset( $wp_meta_boxes['dashboard'] ) && ! empty( $wp_meta_boxes['dashboard'] ) ) {
+			foreach ( $wp_meta_boxes['dashboard'] as &$priorities ) {
+				foreach ( $priorities as &$widgets ) {
+					foreach ( $widgets as &$widget ) {
+
+						$dash_widgets[ $widget['id'] ] = array_intersect_key( $widget, array_flip( array(
+							'id',
+							'title',
+						) ) );
+
+						// If is an AC widget, get AC ID and args
+						if ( isset( $this->customize_dashwidgets->dash_widgets[ $widget['id'] ] ) ) {
+
+							$dash_widgets[ $widget['id'] ]['ac_id'] = $this->customize_dashwidgets->dash_widgets[ $widget['id'] ]['ac_id'];
+							$dash_widgets[ $widget['id'] ]['args']  = array_diff_key(
+								$this->customize_dashwidgets->dash_widgets[ $widget['id'] ],
+								array_flip( array(
+									'id',
+									'ac_id',
+									'title'
+								) )
+							);
+						}
+					}
+				}
+			}
+			unset( $priorities, $widgets, $widget );
+		}
+
+		$this->customize_dashwidgets->dash_widgets = apply_filters( 'ac_dash_widgets', $dash_widgets );
+	}
+
+	/**
 	 * Saves the supplied menu via AJAX.
 	 *
 	 * @since 0.1.0
@@ -379,13 +508,11 @@ class AC_Interface {
 	 */
 	function ajax_save_interface() {
 
-		if ( ! isset( $_REQUEST['menu'] ) ||
-		     ! isset( $_REQUEST['role'] )
-		) {
+		if ( ! isset( $_REQUEST['role'] ) ) {
 
 			wp_send_json( array(
 				'status'    => 'fail',
-				'error_msg' => 'Could not get menu or role',
+				'error_msg' => 'Could not get role',
 			) );
 		}
 
@@ -397,24 +524,34 @@ class AC_Interface {
 			) );
 		}
 
-		$menu = $_REQUEST['menu'];
-		$role = $_REQUEST['role'];
+		$role    = $_REQUEST['role'];
+		$menu    = isset( $_REQUEST['menu'] ) ? (array) $_REQUEST['menu'] : false;
+		$widgets = isset( $_REQUEST['widgets'] ) ? (array) $_REQUEST['widgets'] : false;
 
-		// Make sure all strings of 'true' and 'false' are bool
-		$menu = ac_string_to_bool( $menu );
+		// Admin Menu
+		if ( $menu ) {
 
-		// Order menu by the "position" field
-		usort( $menu, 'ac_sort_by_position' );
-		foreach ( $menu as &$menu_item ) {
-			if ( $menu_item['submenu'] ) {
-				usort( $menu_item['submenu'], 'ac_sort_by_position' );
+			// Make sure all strings of 'true' and 'false' are bool
+			$menu = ac_string_to_bool( $menu );
+
+			// Order menu by the "position" field
+			usort( $menu, 'ac_sort_by_position' );
+			foreach ( $menu as &$menu_item ) {
+				if ( $menu_item['submenu'] ) {
+					usort( $menu_item['submenu'], 'ac_sort_by_position' );
+				}
 			}
+			unset( $menu_item );
 		}
-		unset( $menu_item );
+
+		// Widgets
+		$widgets = ac_string_to_bool( $widgets );
+		$widgets = wp_unslash( $widgets );
 
 		$old_value = get_option( "ac_customize_$role" );
 		$new_value = array(
-			'menu' => $menu,
+			'menu'    => $menu,
+			'widgets' => $widgets,
 		);
 
 		if ( $old_value === $new_value ) {
@@ -425,7 +562,7 @@ class AC_Interface {
 			) );
 		} else {
 
-			if ( update_option( "ac_customize_$role", array( 'menu' => $menu ) ) ) {
+			if ( update_option( "ac_customize_$role", $new_value ) ) {
 
 				wp_send_json( array(
 					'status' => 'success',
@@ -469,7 +606,6 @@ class AC_Interface {
 		$old_value = get_option( "ac_customize_$role" );
 
 		if ( $old_value ) {
-
 			if ( delete_option( "ac_customize_$role" ) ) {
 
 				wp_send_json( array(
@@ -492,12 +628,12 @@ class AC_Interface {
 	}
 
 	/**
-	 * Adds a widget to the interface.
+	 * Get a widget's HTML.
 	 *
 	 * @since 0.1.0
 	 * @access private
 	 */
-	function ajax_add_widget() {
+	function ajax_get_widget_HTML() {
 
 		if ( ! isset( $_REQUEST['widget'] ) ) {
 
@@ -507,37 +643,40 @@ class AC_Interface {
 			) );
 		}
 
-		if ( ! check_ajax_referer( 'ac-nonce', 'ac_nonce' ) ) {
-
-			wp_send_json( array(
-				'status'    => 'fail',
-				'error_msg' => 'Could not verify security',
-			) );
-		}
+		check_ajax_referer( 'ac-nonce', 'ac_nonce' );
 
 		$widget = $_REQUEST['widget'];
+		$output = $_REQUEST['output'];
 
 		// Get widget properties
-		$ID       = $widget['widget_id'];
-		unset( $widget['widget_id'] );
-//		$name    = $widget['widget_name'];
-		unset( $widget['widget_name'] );
-		$instance = $widget['widget_instance'];
-		unset( $widget['widget_instance'] );
+		$ID = $widget['ac_id'];
+		unset( $widget['ac_id'] );
 
-//		$title = $widget['title'];
+		switch ( $output ) {
+			case 'widget':
 
-		ob_start();
-		self::$widgets[ $ID ][ $instance ]->output( $widget );
-		$output = ob_get_clean();
+				ob_start();
+				self::$widgets[ $ID ]->_output( $widget );
+				$output = ob_get_clean();
+				break;
 
-		ob_start();
-		self::$widgets[ $ID ][ $instance ]->form();
-		$form = ob_get_clean();
+			case 'form':
+
+				ob_start();
+				self::$widgets[ $ID ]->_form( $widget );
+				$output = ob_get_clean();
+				break;
+
+			default:
+				wp_send_json( array(
+					'status'    => 'fail',
+					'error_msg' => 'No output type or incorrect output type specified.',
+				) );
+				break;
+		}
 
 		wp_send_json( array(
 				'status' => 'success',
-				'form'   => $form,
 				'output' => $output,
 			)
 		);
